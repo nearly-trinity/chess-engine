@@ -1,5 +1,5 @@
 # game-solver-template
-Asjal Ahmad
+Asjal Ahmad - 0854523
 Nathan Early 
 Janet Jiang
 Garrett Greiner
