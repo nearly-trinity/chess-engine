@@ -2,6 +2,6 @@
 Asjal Ahmad
 Nathan Early 
 Janet Jiang
-Garrett Greiner
+Garrett Greiner - 0850844
 Trey Lisauckis - 0850163
 
