@@ -88,9 +88,29 @@ readBoard input = let
         x -> error "invalid turn"
     in (turn, False, (catMaybes board))
 
+{-
+findPieceAtLoc :: Board -> ColNum -> RowNum -> Maybe Piece
+findPieceAtLoc pieces col row = let
+    searchLoc = Location col row
+    foundPiece = filter (\(x) -> loc x == searchLoc) pieces
+    in if(null foundPiece) 
+    then Nothing
+    else Just $ (head foundPiece)
 
+scanCols :: Board -> ColNum -> RowNum -> String
+scanCols pieces col row = let
+    found = findPieceAtLoc pieces col row
+    in if isNothing found
+    then "  "
+    else show found ++ " "
 
+scanRows :: Board -> RowNum -> String
+scanRows pieces 8 = scanCols 1 8
+scanRows pieces row = scanCols 1 row 
 
+displayBoard :: Board -> String
+displayBoard pieces = scanRows pieces 1
+-}
 
 
 
