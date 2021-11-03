@@ -20,6 +20,7 @@ data Color = Black | White deriving (Show, Eq)
 data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq)
 type Location = (Int, Int)
 
+-- Capital letters represent pieces of White team while lowercase letters are for Black team
 instance Show Piece where
     show (Piece White King) = "K"
     show (Piece White Queen) = "Q"
@@ -61,10 +62,11 @@ readRow (char:str) rowNum colNum
         in (Just ((rowNum, colNum), piece) : readRow str rowNum (colNum+1))
     | otherwise = error "invalid parse input"
 
-startingPosition = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
 -- "5r2/2p2rb1/1pNp4/p2Pp1pk/2P1K3/PP3PP1/5R2/5R2 | w | - | - | 1 | 51"
 -- "w" means first elem is 8th row
 -- "b" means first elem is 1st row
+startingPosition = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 readBoard :: String -> GameState
 readBoard input = let
     (boardData:rest) = splitOn " " input
