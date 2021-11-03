@@ -4,6 +4,7 @@ import Data.Maybe
 
 type GameState = (Turn, Won, Board)
 
+-- Functions for parsing game state
 getTurn :: GameState -> Turn
 getTurn (turn,_,_) = turn
 getWon :: GameState -> Won
@@ -11,9 +12,16 @@ getWon (_,won,_) = won
 getBoard :: GameState -> Board
 getBoard (_,_,board) = board
 
+-- Whose turn it is (Black or White)
 type Won = Bool
+
+-- Won is a bool. True if game is over and false otherwise
 data Turn = TColor Color deriving (Show, Eq)
+
+-- Board is a list of pieces
 type Board = [Piece]
+
+-- Piece is a structure that has Color (team), PieceType (king, queen, etc), location is rowNum and colNum on the table
 data Piece = Piece { pColor :: Color,
                      pType :: PieceType,
                      loc :: Location }
@@ -25,6 +33,7 @@ data Location = Location { col :: Int,
                            row :: Int }
                 deriving (Show, Eq)
 
+-- Capital letters represent pieces of White team while lowercase letters are for Black team
 instance Show Piece where
     show (Piece White King _) = "K"
     show (Piece White Queen _) = "Q"
@@ -66,11 +75,13 @@ readRow (char:str) rowNum colNum
         in (piece : readRow str rowNum (colNum+1))
     | otherwise = error "invalid parse input"
 
-
-startingPosition = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+--      Starting Position
+-- digit represent number of empty spaces. '/' character separates lines
 -- "5r2/2p2rb1/1pNp4/p2Pp1pk/2P1K3/PP3PP1/5R2/5R2 | w | - | - | 1 | 51"
 -- "w" means first elem is 8th row
 -- "b" means first elem is 1st row
+startingPosition = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 readBoard :: String -> GameState
 readBoard input = let
     (boardData:rest) = splitOn " " input
