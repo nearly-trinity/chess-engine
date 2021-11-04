@@ -4,7 +4,6 @@ import Data.Maybe
 import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
 import qualified Data.Set as Set
 import Data.Char (isAsciiLower, isAsciiUpper)
-import Distribution.Types.LocalBuildInfo (LocalBuildInfo)
 
 ----------------------------------------------------------------------------
 --                          Data Types and Aliases
@@ -31,7 +30,7 @@ data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq
 -- location using a tuple of row and column number
 type Location = (Int, Int)
 
--- uppercase letters are for pieces of black team; lowercase letters are for white team
+-- uppercase letters are for pieces of white team; lowercase letters are for black team
 instance Show Piece where
     show (Piece White King) = "K"
     show (Piece White Queen) = "Q"
@@ -135,8 +134,18 @@ inBounds (row, col) = row <= 8 && row >= 1 && col <= 8 && col >= 1
 
 isObstacle :: Board -> (RowNum, ColNum) -> Bool
 isObstacle [] _ = False
-isObstacle ((loc, _):rest) thisLoc@(x,y) = (x<1 || x>8 || y<1 || y>8) || 
-                                            ((thisLoc == loc) || isObstacle rest thisLoc)
+isObstacle ((loc, _):rest) thisLoc@(x,y) = (x<1 || x>8 || y<1 || y>8) ||
+                                            thisLoc == loc || isObstacle rest thisLoc
+
+isSameColor :: Board -> (RowNum, ColNum) -> Color -> Bool
+isSameColor board loc col =
+    case lookup loc board of
+        Just found -> col == pColor found
+        Nothing -> error "invalid location in isSameColor"
+
+
+isEmpty :: Board -> (RowNum, ColNum) -> Bool
+isEmpty board loc = loc `notElem` map fst board
 
 -- reverse lookUp based on piece value
 lookupLoc :: Board -> Piece -> Maybe Location
@@ -156,6 +165,42 @@ negDiagMoves (x,y) = [(x+offset, y-offset) | offset <- [-7..7], inBounds (x+offs
 posDiagMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
 posDiagMoves (x,y) = [(x+offset, y+offset) | offset <- [-7..7], inBounds (x+offset, y+offset)]
 
+posRightDiagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
+posRightDiagMoves board loc@(x,y) color moves
+  | not (isObstacle board loc) && inBounds loc =
+        if isEmpty board loc then posRightDiagMoves board (x+1, y+1) color (loc:moves)
+        else
+            if isSameColor board loc color then moves
+            else loc:moves
+  | otherwise = moves
+
+posLeftDiagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
+posLeftDiagMoves board loc@(x,y) color moves
+  | not (isObstacle board loc) && inBounds loc =
+        if isEmpty board loc then posLeftDiagMoves board (x-1, y+1) color (loc:moves)
+        else
+            if isSameColor board loc color then moves
+            else loc:moves
+  | otherwise = moves
+
+negLeftDiagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
+negLeftDiagMoves board loc@(x,y) color moves
+  | not (isObstacle board loc) && inBounds loc =
+        if isEmpty board loc then negLeftDiagMoves board (x-1, y-1) color (loc:moves)
+        else
+            if isSameColor board loc color then moves
+            else loc:moves
+  | otherwise = moves
+
+negRightDiagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
+negRightDiagMoves board loc@(x,y) color moves
+  | not (isObstacle board loc) && inBounds loc =
+        if isEmpty board loc then negRightDiagMoves board (x+1, y-1) color (loc:moves)
+        else
+            if isSameColor board loc color then moves
+            else loc:moves
+  | otherwise = moves
+
 rowMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
 rowMoves (x,y) = [(x+offset,y) | offset <- [-7..7], inBounds (x+offset, y)]
 
@@ -168,6 +213,20 @@ colMoves (x,y) = [(x,y+offset) | offset <- [-7..7], inBounds (x,y+offset)]
 --      any ((x+a),(y+a)) where x,y is starting pos and a is any constant
 
 testGetMoves = getMoves startingBoard (Piece Black Queen)
+
+
+
+killme = readBoard "8/8/8/6q1/8/8/8/8 w KQkq - 0 1"
+bich = getBoard killme
+
+getqueen = posRightDiagMoves bich (x+1,y+1) myColor [] ++ negLeftDiagMoves bich (x-1,y-1) myColor [] ++ negRightDiagMoves bich (x+1,y-1) myColor [] ++ posLeftDiagMoves bich (x-1,y+1) myColor []
+    where
+        (x,y) = fromJust $ lookupLoc bich (Piece Black Queen)
+        myColor = pColor (Piece Black Queen)
+
+bicha = isEmpty startingBoard
+
+
 
 getMoves :: Board -> Piece -> Set Location
 getMoves board piece =
