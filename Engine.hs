@@ -4,6 +4,7 @@ import Data.Maybe
 import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
 import qualified Data.Set as Set
 import Data.Char (isAsciiLower, isAsciiUpper)
+import Distribution.Types.LocalBuildInfo (LocalBuildInfo)
 
 ----------------------------------------------------------------------------
 --                          Data Types and Aliases
@@ -30,7 +31,7 @@ data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq
 -- location using a tuple of row and column number
 type Location = (Int, Int)
 
--- uppercase letters are for pieces of white team; lowercase letters are for black team
+-- uppercase letters are for pieces of black team; lowercase letters are for white team
 instance Show Piece where
     show (Piece White King) = "K"
     show (Piece White Queen) = "Q"
@@ -129,9 +130,15 @@ readRow (char:str) rowNum colNum
 --                          Legal Moves
 ---------------------------------------------------------------------------- 
 
-inBounds :: RowNum -> ColNum -> Bool
-inBounds row col = row <= 8 && row >= 1 && col <= 8 && col >= 1
+inBounds :: (RowNum, ColNum) -> Bool
+inBounds (row, col) = row <= 8 && row >= 1 && col <= 8 && col >= 1
 
+isObstacle :: Board -> (RowNum, ColNum) -> Bool
+isObstacle [] _ = False
+isObstacle ((loc, _):rest) thisLoc@(x,y) = (x<1 || x>8 || y<1 || y>8) || 
+                                            ((thisLoc == loc) || isObstacle rest thisLoc)
+
+-- reverse lookUp based on piece value
 lookupLoc :: Board -> Piece -> Maybe Location
 lookupLoc [] _ = Nothing
 lookupLoc ((loc,piece):pieces) query =
@@ -139,20 +146,21 @@ lookupLoc ((loc,piece):pieces) query =
     then Just loc
     else lookupLoc pieces query
 
+-- get a list of pieces other than a particular piece
 otherPieces :: Board -> Piece -> [(Location, Piece)]
 otherPieces board thisPiece = filter (\(loc, piece) -> piece /= thisPiece) board
 
 negDiagMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
-negDiagMoves (x,y) = [(x+offset, y-offset) | offset <- [-7..7], inBounds (x+offset) (y-offset)]
+negDiagMoves (x,y) = [(x+offset, y-offset) | offset <- [-7..7], inBounds (x+offset, y-offset)]
 
 posDiagMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
-posDiagMoves (x,y) = [(x+offset, y+offset) | offset <- [-7..7], inBounds (x+offset) (y+offset)]
+posDiagMoves (x,y) = [(x+offset, y+offset) | offset <- [-7..7], inBounds (x+offset, y+offset)]
 
 rowMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
-rowMoves (x,y) = [(x+offset,y) | offset <- [-7..7], inBounds (x+offset) y]
+rowMoves (x,y) = [(x+offset,y) | offset <- [-7..7], inBounds (x+offset, y)]
 
 colMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
-colMoves (x,y) = [(x,y+offset) | offset <- [-7..7], inBounds x (y+offset)]
+colMoves (x,y) = [(x,y+offset) | offset <- [-7..7], inBounds (x,y+offset)]
 
 -- valid movement for the queen:
 --      any y value with eq x
@@ -160,7 +168,6 @@ colMoves (x,y) = [(x,y+offset) | offset <- [-7..7], inBounds x (y+offset)]
 --      any ((x+a),(y+a)) where x,y is starting pos and a is any constant
 
 testGetMoves = getMoves startingBoard (Piece Black Queen)
-
 
 getMoves :: Board -> Piece -> Set Location
 getMoves board piece =
@@ -176,10 +183,6 @@ getMoves board piece =
             --  ex. bottom left, remove moves from "allMoves" that have x < bqX && y < bqY
             in allMoves `difference` notBlkQueen
         x -> error "invalid piece"
-
-
-
-
 
 
 
