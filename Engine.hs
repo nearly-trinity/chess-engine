@@ -1,6 +1,8 @@
 import Data.List
 import Data.List.Split
 import Data.Maybe
+import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
+import qualified Data.Set as Set
 
 type GameState = (Color, Board)
 
@@ -14,10 +16,10 @@ data Turn = TColor Color deriving (Show, Eq)
 type Board = [(Location, Piece)]
 data Piece = Piece { pColor :: Color,
                      pType :: PieceType }
-             deriving (Eq)
+             deriving (Eq, Ord)
 
-data Color = Black | White deriving (Show, Eq)
-data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq)
+data Color = Black | White deriving (Show, Eq, Ord)
+data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq, Ord)
 type Location = (Int, Int)
 
 -- Capital letters represent pieces of White team while lowercase letters are for Black team
@@ -59,13 +61,15 @@ readRow (char:str) rowNum colNum
             'N' -> Piece White Knight 
             'P' -> Piece White Pawn 
             x -> error "invalid piece"
-        in (Just ((rowNum, colNum), piece) : readRow str rowNum (colNum+1))
+        in (Just ((colNum, rowNum), piece) : readRow str rowNum (colNum+1))
     | otherwise = error "invalid parse input"
 
 -- "5r2/2p2rb1/1pNp4/p2Pp1pk/2P1K3/PP3PP1/5R2/5R2 | w | - | - | 1 | 51"
 -- "w" means first elem is 8th row
 -- "b" means first elem is 1st row
-startingPosition = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+startingState = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+startingBoard = getBoard startingState
+
 
 readBoard :: String -> GameState
 readBoard input = let
@@ -84,29 +88,57 @@ readBoard input = let
         x -> error "invalid turn"
     in (turn, (catMaybes board))
 
-{-
-findPieceAtLoc :: Board -> ColNum -> RowNum -> Maybe Piece
-findPieceAtLoc pieces col row = let
-    searchLoc = Location col row
-    foundPiece = filter (\(x) -> loc x == searchLoc) pieces
-    in if(null foundPiece) 
-    then Nothing
-    else Just $ (head foundPiece)
+----------------------------------------------------------------------------
+--                          Legal Moves
+---------------------------------------------------------------------------- 
 
-scanCols :: Board -> ColNum -> RowNum -> String
-scanCols pieces col row = let
-    found = findPieceAtLoc pieces col row
-    in if isNothing found
-    then "  "
-    else show found ++ " "
+inBounds :: RowNum -> ColNum -> Bool
+inBounds row col = row <= 8 && row >= 1 && col <= 8 && col >= 1
 
-scanRows :: Board -> RowNum -> String
-scanRows pieces 8 = scanCols 1 8
-scanRows pieces row = scanCols 1 row 
+lookupLoc :: Board -> Piece -> Maybe Location
+lookupLoc [] _ = Nothing
+lookupLoc ((loc,piece):pieces) query = 
+    if piece == query
+    then Just loc
+    else lookupLoc pieces query
 
-displayBoard :: Board -> String
-displayBoard pieces = scanRows pieces 1
--}
+otherPieces :: Board -> Piece -> [(Location, Piece)]
+otherPieces board thisPiece = filter (\(loc, piece) -> piece /= thisPiece) board
+
+negDiagMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
+negDiagMoves (x,y) = [(x+offset, y-offset) | offset <- [-7..7], inBounds (x+offset) (y-offset)] 
+
+posDiagMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
+posDiagMoves (x,y) = [(x+offset, y+offset) | offset <- [-7..7], inBounds (x+offset) (y+offset)] 
+
+rowMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
+rowMoves (x,y) = [(x+offset,y) | offset <- [-7..7], inBounds (x+offset) y]
+
+colMoves :: (RowNum, ColNum) -> [(RowNum, ColNum)]
+colMoves (x,y) = [(x,y+offset) | offset <- [-7..7], inBounds x (y+offset)]
+
+-- valid movement for the queen:
+--      any y value with eq x
+--      any x value with eq y
+--      any ((x+a),(y+a)) where x,y is starting pos and a is any constant
+
+testGetMoves = getMoves startingBoard (Piece Black Queen)
+
+
+getMoves :: Board -> Piece -> Set Location 
+getMoves board piece =
+    case piece of 
+        Piece Black Queen -> let
+            (x,y) = fromJust $ lookupLoc board piece
+            allMoves = fromList ((rowMoves (x,y)) ++ (colMoves (x,y)) ++ (posDiagMoves (x,y)) ++ (negDiagMoves (x,y)))
+            notBlkQueen = fromList $ map fst $ otherPieces board piece
+            collisions = allMoves `intersection` notBlkQueen
+            -- need helper
+            --  for each collision check what quadrant it is relative to black queen
+            --  ex. top right, remove moves from "allMoves" that have x > bqX && y > bqY
+            --  ex. bottom left, remove moves from "allMoves" that have x < bqX && y < bqY
+            in allMoves `difference` notBlkQueen
+        x -> error "invalid piece"
 
 
 
@@ -115,4 +147,18 @@ displayBoard pieces = scanRows pieces 1
 
 
 
- 
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
