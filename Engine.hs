@@ -206,7 +206,10 @@ getMoves board piece =
     
         x -> error "invalid piece"
 
-
+isWinner :: Board -> String
+isWinner board = let pieces = [piece|(loc,piece)<-board]
+                 in if not (Piece Black King `elem` pieces) then "White is the winner" 
+                    else if not (Piece White King `elem` pieces) then "Black is the winner" else "No one won yet"
 
 
 
