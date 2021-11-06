@@ -129,21 +129,24 @@ readRow (char:str) rowNum colNum
 --                          Legal Moves
 ---------------------------------------------------------------------------- 
 
+-- check if a location is in bounds of the 8x8 grid
 inBounds :: (RowNum, ColNum) -> Bool
 inBounds (row, col) = row <= 8 && row >= 1 && col <= 8 && col >= 1
 
+-- check if there is a piece at a location on the board
 isObstacle :: Board -> (RowNum, ColNum) -> Bool
 isObstacle [] _ = False
 isObstacle ((loc, _):rest) thisLoc@(x,y) = (x<1 || x>8 || y<1 || y>8) ||
                                             thisLoc == loc || isObstacle rest thisLoc
 
+-- check if a piece is the same team as a piece on a location on the board
 isSameColor :: Board -> (RowNum, ColNum) -> Color -> Bool
 isSameColor board loc color =
     case lookup loc board of
         Just found -> color == pColor found
         Nothing -> error "invalid location in isSameColor"
 
-
+-- check if a location is unoccupied
 isEmpty :: Board -> (RowNum, ColNum) -> Bool
 isEmpty board loc = loc `notElem` map fst board
 
@@ -159,6 +162,7 @@ lookupLoc ((loc,piece):pieces) query =
 otherPieces :: Board -> Piece -> [(Location, Piece)]
 otherPieces board thisPiece = filter (\(loc, piece) -> piece /= thisPiece) board
 
+-- returns a list of possible moves for a given piece at a given location using a direction lambda
 directionalMoves :: ((Int,Int) -> (Int,Int)) -> Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
 directionalMoves f board loc@(x,y) color moves 
   | inBounds loc =
@@ -169,12 +173,15 @@ directionalMoves f board loc@(x,y) color moves
   | otherwise = moves
 
 
+-- calls directionalMoves to get the list of possible row moves for a given loc
 rowMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
 rowMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x+1,y)) board (x+1,y) color [] ++ directionalMoves (\(x,y)->(x-1,y)) board (x-1,y) color [] 
 
+-- calls directionalMoves to get the list of possible column moves for a given loc
 colMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
 colMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x,y+1)) board (x,y+1) color [] ++ directionalMoves (\(x,y)->(x,y-1)) board (x,y-1) color [] 
 
+-- calls directionalMoves to get the list of possible diagonal moves for a given loc
 diagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
 diagMoves board loc@(x,y) color moves  = 
     directionalMoves (\(x,y)->(x+1,y+1)) board (x+1,y+1) color [] ++ 
@@ -184,6 +191,7 @@ diagMoves board loc@(x,y) color moves  =
 
 testGetMoves = getMoves startingBoard (Piece White Queen)
 
+-- gets the list of possible moves for a piece depending on its piece type
 getMoves :: Board -> Piece -> [(RowNum, ColNum)]
 getMoves board piece = 
     let
@@ -191,6 +199,7 @@ getMoves board piece =
         color = pColor piece
     in
     case pType piece of
+        King -> undefined
         Queen -> rows ++ cols ++ diags
             where 
                 rows = rowMoves board loc color []
@@ -198,13 +207,13 @@ getMoves board piece =
                 diags = diagMoves board loc color []
         Rook -> rows ++ cols    
             where
-
                 rows = rowMoves board loc color []
                 cols = colMoves board loc color []
-        
-
-    
-        x -> error "invalid piece"
+        Bishop -> diags
+            where
+                diags = diagMoves board loc color []
+        Knight -> undefined
+        Pawn -> undefined    
 
 
 
