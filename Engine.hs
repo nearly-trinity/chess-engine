@@ -98,7 +98,7 @@ readBoard input = let
             rows = [1..8] `zip` splitOn "/" boardData
             in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
         x -> error "invalid turn"
-    in (turn, catMaybes board)
+    in (turn, (catMaybes board))
 
 -- helper for readBoard
 readRow :: String -> RowNum -> ColNum -> [Maybe (Location, Piece)]
@@ -215,21 +215,62 @@ getMoves board piece =
         Knight -> undefined
         Pawn -> undefined    
 
+----------------------------------------------------------------------------
+--                          Display Board
+---------------------------------------------------------------------------- 
 
+-- Used to offset lines when printing the board
+offsetStr = "  " 
 
+-- Returns the concatenation of the strings with a newline added at the end
+format :: [String] -> String
+format strs = concat $ strs ++ ["\n"]
 
+-- Returns the strings with an offset at the front
+offset :: [String] -> [String]
+offset strs = [offsetStr] ++ strs
 
+-- Returns a nicely formatted string that represents the given board
+-- 
+-- Load this file into ghci and enter
+--     putStr $ displayBoard $ snd startingPosition
+-- To see the output for the starting position
 
+displayBoard :: Board -> String
+displayBoard b = makeBorder ++ makeRows b ++ makeLine
 
+-- Creates the line with the labels for the columns of the board
+makeBorder :: String
+makeBorder = format $ offset $ (map (\x -> " " ++ show x) ['A'..'H'])
 
+-- Creates a string for all of the rows of the board
+makeRows:: Board -> String
+makeRows b = concat $ (map (\x -> makeRow b x) [8,7..1])
 
+-- Creates a string for a given row of the board
+makeRow :: Board -> Int -> String
+makeRow b n = format $ [makeLine, show n, " ", makeContent b n]
+  
+-- Creates a horizontal line
+makeLine :: String
+makeLine =  format $ offset $ (replicate 8 " ---")
 
+-- Makes the middle of the cells
+makeContent :: Board -> Int -> String
+makeContent b n = concat $ (map (\x -> "| " ++ makePiece b x ++ " ") [(n,i) | i <- [1..8]]) ++ ["|"]
 
+-- Returns the representation of a piece, or a space if there is no piece at that location
+makePiece :: Board -> Location -> String
+makePiece b loc =
+    case lookupVal loc b of
+        Just x -> show x
+        Nothing -> " "
 
+-- Just a simple lookup function
+lookupVal :: Eq a => a -> [(a, b)] -> Maybe b
+lookupVal key lst = lookupHelper ([snd x | x <- lst, key == fst x])
 
-
-
-
-
-
+lookupHelper :: [b] -> Maybe b
+lookupHelper [x]  = Just x
+lookupHelper lst  = Nothing
 
