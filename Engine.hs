@@ -199,6 +199,7 @@ getMoves board piece =
         color = pColor piece
     in
     case pType piece of
+        King -> undefined
         Queen -> rows ++ cols ++ diags
             where 
                 rows = rowMoves board loc color []
@@ -206,13 +207,13 @@ getMoves board piece =
                 diags = diagMoves board loc color []
         Rook -> rows ++ cols    
             where
-
                 rows = rowMoves board loc color []
                 cols = colMoves board loc color []
-        
-
-    
-        x -> error "invalid piece"
+        Bishop -> diags
+            where
+                diags = diagMoves board loc color []
+        Knight -> undefined
+        Pawn -> undefined    
 
 
 
