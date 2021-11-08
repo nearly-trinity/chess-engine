@@ -3,7 +3,7 @@ import Data.List.Split
 import Data.Maybe
 import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
 import qualified Data.Set as Set
-import Data.Char (isAsciiLower, isAsciiUpper)
+import Data.Char (isAsciiLower, isAsciiUpper, chr)
 import Text.XHtml.Frameset (cols)
 
 ----------------------------------------------------------------------------
@@ -81,6 +81,12 @@ getBoard (_,board) = board
 
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
+
+midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R w KQkq - 0 11"
+midgameBoard = getBoard midgameState
+
+prettyBoard :: Board -> [((Char, RowNum), Piece)]
+prettyBoard board = map (\((col,row), piece) -> ((chr (64+col),row), piece)) board
 
 -- parses the FEN notation
 readState :: String -> GameState
@@ -215,6 +221,8 @@ getMoves board piece =
         Knight -> undefined
         Pawn -> undefined    
 
+prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
+prettyMoves moves = map (\(col, row) -> (chr (64 + col), row)) moves
 ----------------------------------------------------------------------------
 --                          Display Board
 ---------------------------------------------------------------------------- 
