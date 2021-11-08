@@ -98,7 +98,7 @@ readState input = let
             rows = [1..8] `zip` splitOn "/" boardData
             in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
         x -> error "invalid turn"
-    in (turn, (catMaybes board))
+    in (turn, catMaybes board)
 
 -- helper for readBoard
 readRow :: String -> RowNum -> ColNum -> [Maybe (Location, Piece)]
@@ -133,12 +133,6 @@ readRow (char:str) rowNum colNum
 inBounds :: (RowNum, ColNum) -> Bool
 inBounds (row, col) = row <= 8 && row >= 1 && col <= 8 && col >= 1
 
--- check if there is a piece at a location on the board
-isObstacle :: Board -> (RowNum, ColNum) -> Bool
-isObstacle [] _ = False
-isObstacle ((loc, _):rest) thisLoc@(x,y) = (x<1 || x>8 || y<1 || y>8) ||
-                                            thisLoc == loc || isObstacle rest thisLoc
-
 -- check if a piece is the same team as a piece on a location on the board
 isSameColor :: Board -> (RowNum, ColNum) -> Color -> Bool
 isSameColor board loc color =
@@ -158,42 +152,57 @@ lookupLoc ((loc,piece):pieces) query =
     then Just loc
     else lookupLoc pieces query
 
--- get a list of pieces other than a particular piece
-otherPieces :: Board -> Piece -> [(Location, Piece)]
-otherPieces board thisPiece = filter (\(loc, piece) -> piece /= thisPiece) board
-
 -- returns a list of possible moves for a given piece at a given location using a direction lambda
 directionalMoves :: ((Int,Int) -> (Int,Int)) -> Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-directionalMoves f board loc@(x,y) color moves 
-  | inBounds loc =
+directionalMoves f board loc@(x,y) color moves
+    | inBounds loc =
         if isEmpty board loc then directionalMoves f board (f loc) color (loc:moves)
         else
             if isSameColor board loc color then moves
             else loc:moves
-  | otherwise = moves
+    | otherwise = moves
 
+-- returns a bool that represents if a move to a certain location on a board is permisilbe
+shouldMove :: Board -> (RowNum, ColNum) -> Color -> Bool
+shouldMove board loc color
+    | inBounds loc =
+        isEmpty board loc || not (isSameColor board loc color)
+    | otherwise = False
 
 -- calls directionalMoves to get the list of possible row moves for a given loc
 rowMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-rowMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x+1,y)) board (x+1,y) color [] ++ directionalMoves (\(x,y)->(x-1,y)) board (x-1,y) color [] 
+rowMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x+1,y)) board (x+1,y) color [] ++ directionalMoves (\(x,y)->(x-1,y)) board (x-1,y) color []
 
 -- calls directionalMoves to get the list of possible column moves for a given loc
 colMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-colMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x,y+1)) board (x,y+1) color [] ++ directionalMoves (\(x,y)->(x,y-1)) board (x,y-1) color [] 
+colMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x,y+1)) board (x,y+1) color [] ++ directionalMoves (\(x,y)->(x,y-1)) board (x,y-1) color []
 
 -- calls directionalMoves to get the list of possible diagonal moves for a given loc
 diagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-diagMoves board loc@(x,y) color moves  = 
-    directionalMoves (\(x,y)->(x+1,y+1)) board (x+1,y+1) color [] ++ 
-    directionalMoves (\(x,y)->(x-1,y-1)) board (x-1,y-1) color [] ++ 
-    directionalMoves (\(x,y)->(x+1,y-1)) board (x+1,y-1) color [] ++ 
+diagMoves board loc@(x,y) color moves  =
+    directionalMoves (\(x,y)->(x+1,y+1)) board (x+1,y+1) color [] ++
+    directionalMoves (\(x,y)->(x-1,y-1)) board (x-1,y-1) color [] ++
+    directionalMoves (\(x,y)->(x+1,y-1)) board (x+1,y-1) color [] ++
     directionalMoves (\(x,y)->(x-1,y+1)) board (x-1,y+1) color []
 
-testGetMoves = getMoves startingBoard (Piece White Queen)
+knightMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+knightMoves board loc@(x,y) color = filter (\pos -> shouldMove board pos color) possibleLocs
+    where
+        possibleLocs =
+            [(x+1,y+2),(x+2,y+1), (x-1,y+2), (x-2,y+1), (x-1,y-2), (x-2,y-1), (x+1,y-2), (x+2,y-1)]
+
+pawnMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+pawnMove = undefined
+
+kingMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+kingMove = undefined
+
+testGetMoves :: [(RowNum, ColNum)]
+testGetMoves = getMoves startingBoard (Piece White Knight)
 
 -- gets the list of possible moves for a piece depending on its piece type
 getMoves :: Board -> Piece -> [(RowNum, ColNum)]
-getMoves board piece = 
+getMoves board piece =
     let
         loc@(x,y) = fromJust $ lookupLoc board piece
         color = pColor piece
@@ -201,26 +210,25 @@ getMoves board piece =
     case pType piece of
         King -> undefined
         Queen -> rows ++ cols ++ diags
-            where 
+            where
                 rows = rowMoves board loc color []
                 cols = colMoves board loc color []
                 diags = diagMoves board loc color []
-        Rook -> rows ++ cols    
+        Rook -> rows ++ cols
             where
                 rows = rowMoves board loc color []
                 cols = colMoves board loc color []
         Bishop -> diags
             where
                 diags = diagMoves board loc color []
-        Knight -> undefined
-        Pawn -> undefined    
-
+        Knight -> knightMoves board loc color
+        Pawn -> undefined
 ----------------------------------------------------------------------------
 --                          Display Board
 ---------------------------------------------------------------------------- 
 
 -- Used to offset lines when printing the board
-offsetStr = "  " 
+offsetStr = "  "
 
 -- Returns the concatenation of the strings with a newline added at the end
 format :: [String] -> String
@@ -250,7 +258,7 @@ makeRows b = concat $ (map (\x -> makeRow b x) [8,7..1])
 -- Creates a string for a given row of the board
 makeRow :: Board -> Int -> String
 makeRow b n = format $ [makeLine, show n, " ", makeContent b n]
-  
+
 -- Creates a horizontal line
 makeLine :: String
 makeLine =  format $ offset $ (replicate 8 " ---")
