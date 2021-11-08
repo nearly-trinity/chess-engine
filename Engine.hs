@@ -79,12 +79,12 @@ getTurn (turn,_) = turn
 getBoard :: GameState -> Board
 getBoard (_,board) = board
 
-startingState = readBoard "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
 
 -- parses the FEN notation
-readBoard :: String -> GameState
-readBoard input = let
+readState :: String -> GameState
+readState input = let
     (boardData:rest) = splitOn " " input
     turn = case head rest of -- this is either "w" or "b"
         "w" -> White
@@ -233,7 +233,7 @@ offset strs = [offsetStr] ++ strs
 -- Returns a nicely formatted string that represents the given board
 -- 
 -- Load this file into ghci and enter
---     putStr $ displayBoard $ snd startingPosition
+testDisplay = putStr $ displayBoard startingBoard
 -- To see the output for the starting position
 
 displayBoard :: Board -> String
