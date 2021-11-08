@@ -204,16 +204,21 @@ kingMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
 kingMove = undefined
 
 testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves startingBoard (Piece White Knight)
+testGetMoves = getMoves startingBoard ((2,1),Piece White Knight)
+
+testIncorrectGetMoves :: [(RowNum, ColNum)]
+testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
 
 -- gets the list of possible moves for a piece depending on its piece type
-getMoves :: Board -> Piece -> [(RowNum, ColNum)]
-getMoves board piece =
-    let
-        loc@(x,y) = fromJust $ lookupLoc board piece
-        color = pColor piece
-    in
-    case pType piece of
+getMoves :: Board -> (Location, Piece) -> [(RowNum, ColNum)]
+getMoves board (loc, piece) =
+    let color = pColor piece
+        checkPiece = lookup loc board
+    in if isNothing checkPiece 
+       then error "no piece at location"
+       else if fromJust checkPiece /= piece 
+       then error "incorrect piece at location"
+       else case pType piece of
         King -> undefined
         Queen -> rows ++ cols ++ diags
             where
