@@ -257,7 +257,7 @@ makeLine =  format $ offset $ (replicate 8 " ---")
 
 -- Makes the middle of the cells
 makeContent :: Board -> Int -> String
-makeContent b n = concat $ (map (\x -> "| " ++ makePiece b x ++ " ") [(n,i) | i <- [1..8]]) ++ ["|"]
+makeContent b n = concat $ (map (\x -> "| " ++ makePiece b x ++ " ") [(i,n) | i <- [1..8]]) ++ ["|"]
 
 -- Returns the representation of a piece, or a space if there is no piece at that location
 makePiece :: Board -> Location -> String
