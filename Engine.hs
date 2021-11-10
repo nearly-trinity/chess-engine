@@ -202,11 +202,6 @@ pawnMove board loc@(col,row) color = let
     moveSquares = case color of
         Black -> let -- if row number is 7 then we can move twice
             oneDown = lookup (col, row-1) board
-            ne of these:
-                    ‘>=’ (imported from Prelude), ‘==’ (imported from Prelude),
-                            ‘/=’ (imported from Prelude)
-                                |
-
             twoDown = lookup (col, row-2) board
             in if isNothing oneDown && row == 7 && isNothing twoDown
             then [(col, row-1), (col, row-2)] else
