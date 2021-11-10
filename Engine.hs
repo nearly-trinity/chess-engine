@@ -202,6 +202,11 @@ pawnMove board loc@(col,row) color = let
     moveSquares = case color of
         Black -> let -- if row number is 7 then we can move twice
             oneDown = lookup (col, row-1) board
+            ne of these:
+                    ‘>=’ (imported from Prelude), ‘==’ (imported from Prelude),
+                            ‘/=’ (imported from Prelude)
+                                |
+
             twoDown = lookup (col, row-2) board
             in if isNothing oneDown && row == 7 && isNothing twoDown
             then [(col, row-1), (col, row-2)] else
@@ -251,7 +256,7 @@ testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
 -- gets the list of possible moves for a piece depending on its piece type
-getMoves :: Board -> (Location, Piece) -> [(RowNum, ColNum)]
+getMoves :: Board -> (Location, Piece) -> [Location]
 getMoves board (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
@@ -335,4 +340,24 @@ lookupVal key lst = lookupHelper ([snd x | x <- lst, key == fst x])
 lookupHelper :: [b] -> Maybe b
 lookupHelper [x]  = Just x
 lookupHelper lst  = Nothing
+
+------------------------------------------------------------------
+--                      Make Move
+------------------------------------------------------------------
+
+makeMove :: Board -> (Location, Piece) -> Location -> Board
+makeMove board (from, piece) to = let
+    possibleMoves = getMoves board (from, piece) 
+    in if to `elem` possibleMoves
+    then let remBoard = filter (/= (from, piece)) board
+    in (to, piece) : remBoard
+    else error "invalid move"
+    
+
+    
+
+
+
+
+
 
