@@ -240,10 +240,13 @@ pawnMove board loc@(col,row) color = let
     in moveSquares ++ captureSquares
 
 kingMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
-kingMove = undefined
+kingMove board loc@(x, y) color = filter (\pos -> shouldMove board pos color) possibleLocs
+    where
+        possibleLocs =
+            [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
 
 testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves startingBoard ((2,1),Piece White Knight)
+testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
 
 testIncorrectGetMoves :: [(RowNum, ColNum)]
 testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
@@ -260,7 +263,7 @@ getMoves board (loc, piece) =
        else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
        else case pType piece of
-        King -> undefined
+        King -> kingMove board loc color
         Queen -> rows ++ cols ++ diags
             where
                 rows = rowMoves board loc color []
@@ -297,7 +300,7 @@ offset strs = offsetStr : strs
 -- Returns a nicely formatted string that represents the given board
 -- 
 -- Load this file into ghci and enter
-testDisplay = putStr $ displayBoard startingBoard
+testDisplay = putStr $ displayBoard pawnTestBoard
 -- To see the output for the starting position
 
 displayBoard :: Board -> String
