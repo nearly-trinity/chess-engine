@@ -305,7 +305,7 @@ displayBoard b = makeRows b ++ makeLine ++ makeBorder
 
 -- Creates the line with the labels for the columns of the board
 makeBorder :: String
-makeBorder = format $ offset (map (\x -> " " ++ show x) ['A'..'H'])
+makeBorder = format $ offset (map (\x -> "  " ++ [x] ++ " ") ['a'..'h'])
 
 -- Creates a string for all of the rows of the board
 makeRows:: Board -> String
