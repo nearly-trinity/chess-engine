@@ -86,7 +86,7 @@ midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R
 midgameBoard = getBoard midgameState
 
 prettyBoard :: Board -> [((Char, RowNum), Piece)]
-prettyBoard board = map (\((col,row), piece) -> ((chr (64+col),row), piece)) board
+prettyBoard = map (\((col,row), piece) -> ((chr (64+col),row), piece))
 
 -- parses the FEN notation
 readState :: String -> GameState
@@ -203,33 +203,31 @@ pawnMove board loc@(col,row) color = let
         Black -> let -- if row number is 7 then we can move twice
             oneDown = lookup (col, row-1) board
             twoDown = lookup (col, row-2) board
-            in if oneDown == Nothing && row == 7 && twoDown == Nothing
+            in if isNothing oneDown && row == 7 && isNothing twoDown
             then [(col, row-1), (col, row-2)] else
-            if oneDown == Nothing then [(col, row-1)]
-            else []
+            [(col, row-1) | isNothing oneDown]
         White -> let -- if row number is 2 then we can move twice
             oneUp = lookup (col, row+1) board
             twoUp = lookup (col, row+2) board
-            in if oneUp == Nothing && row == 2 && twoUp == Nothing
+            in if isNothing oneUp && row == 2 && isNothing twoUp
             then [(col, row+1), (col, row+2)] else
-            if oneUp == Nothing then [(col, row+1)]
-            else []
-    captureSquares = case color of 
-        Black -> let 
+            [(col, row+1) | isNothing oneUp]
+    captureSquares = case color of
+        Black -> let
             downLeft  = lookup (col-1, row-1) board
             downRight = lookup (col+1, row-1) board
-            takeDownL = case downLeft of 
+            takeDownL = case downLeft of
                 Nothing -> False
                 x -> pColor (fromJust downLeft) == White
             takeDownR = pColor (fromJust downRight) == White
             in if takeDownL && takeDownR
             then [(col-1, row-1), (col+1, row-1)] else
-            if takeDownL then [(col-1, row-1)] else 
-            if takeDownR then [(col+1, row-1)] else []
-        White -> let 
+            if takeDownL then [(col-1, row-1)] else
+            [(col+1, row-1) | takeDownR]
+        White -> let
             upLeft  = lookup (col-1, row+1) board
             upRight = lookup (col+1, row+1) board
-            takeUpL = case upLeft of 
+            takeUpL = case upLeft of
                 Nothing -> False
                 x -> pColor (fromJust upLeft)  == Black
             takeUpR = case upRight of
@@ -237,8 +235,8 @@ pawnMove board loc@(col,row) color = let
                 x -> pColor (fromJust upRight) == Black
             in if takeUpL && takeUpR
             then [(col-1, row+1), (col+1, row+1)] else
-            if takeUpL then [(col-1, row+1)] else 
-            if takeUpR then [(col+1, row+1)] else []
+            if takeUpL then [(col-1, row+1)] else
+            [(col+1, row+1) | takeUpR]
     in moveSquares ++ captureSquares
 
 kingMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
@@ -257,9 +255,9 @@ getMoves :: Board -> (Location, Piece) -> [(RowNum, ColNum)]
 getMoves board (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
-    in if isNothing checkPiece 
+    in if isNothing checkPiece
        then error "no piece at location"
-       else if fromJust checkPiece /= piece 
+       else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
        else case pType piece of
         King -> undefined
@@ -280,7 +278,7 @@ getMoves board (loc, piece) =
 
 -- converts col numbers to letters like a typical chess board
 prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
-prettyMoves moves = map (\(col, row) -> (chr (64 + col), row)) moves
+prettyMoves = map (\(col, row) -> (chr (64 + col), row))
 ----------------------------------------------------------------------------
 --                          Display Board
 ---------------------------------------------------------------------------- 
@@ -294,7 +292,7 @@ format strs = concat $ strs ++ ["\n"]
 
 -- Returns the strings with an offset at the front
 offset :: [String] -> [String]
-offset strs = [offsetStr] ++ strs
+offset strs = offsetStr : strs
 
 -- Returns a nicely formatted string that represents the given board
 -- 
@@ -307,30 +305,28 @@ displayBoard b = makeRows b ++ makeLine ++ makeBorder
 
 -- Creates the line with the labels for the columns of the board
 makeBorder :: String
-makeBorder = format $ offset $ (map (\x -> " " ++ show x) ['A'..'H'])
+makeBorder = format $ offset (map (\x -> " " ++ show x) ['A'..'H'])
 
 -- Creates a string for all of the rows of the board
 makeRows:: Board -> String
-makeRows b = concat $ (map (\x -> makeRow b x) [8,7..1])
+makeRows b = concatMap (makeRow b) [8,7..1]
 
 -- Creates a string for a given row of the board
 makeRow :: Board -> Int -> String
-makeRow b n = format $ [makeLine, show n, " ", makeContent b n]
+makeRow b n = format [makeLine, show n, " ", makeContent b n]
 
 -- Creates a horizontal line
 makeLine :: String
-makeLine =  format $ offset $ (replicate 8 " ---")
+makeLine =  format $ offset (replicate 8 " ---")
 
 -- Makes the middle of the cells
 makeContent :: Board -> Int -> String
-makeContent b n = concat $ (map (\x -> "| " ++ makePiece b x ++ " ") [(i,n) | i <- [1..8]]) ++ ["|"]
+makeContent b n = concat $ ([(\ x -> "| " ++ makePiece b x ++ " ") (i, n) | i <- [1 .. 8]]) ++ ["|"]
 
 -- Returns the representation of a piece, or a space if there is no piece at that location
 makePiece :: Board -> Location -> String
 makePiece b loc =
-    case lookupVal loc b of
-        Just x -> show x
-        Nothing -> " "
+    maybe " " show (lookupVal loc b)
 
 -- Just a simple lookup function
 lookupVal :: Eq a => a -> [(a, b)] -> Maybe b
