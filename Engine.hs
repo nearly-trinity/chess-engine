@@ -208,8 +208,8 @@ getMoves board piece =
 
 isWinner :: Board -> String
 isWinner board = let pieces = [piece|(loc,piece)<-board]
-                 in if not (Piece Black King `elem` pieces) then "White is the winner" 
-                    else if not (Piece White King `elem` pieces) then "Black is the winner" else "No one won yet"
+                 in if not (Piece Black King `elem` pieces) then True 
+                    else if not (Piece White King `elem` pieces) then True else False
 
 
 
