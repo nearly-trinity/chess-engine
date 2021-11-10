@@ -240,13 +240,10 @@ pawnMove board loc@(col,row) color = let
     in moveSquares ++ captureSquares
 
 kingMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
-kingMove board loc@(x, y) color = filter (\pos -> shouldMove board pos color) possibleLocs
-    where
-        possibleLocs =
-            [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
+kingMove = undefined
 
 testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
+testGetMoves = getMoves startingBoard ((2,1),Piece White Knight)
 
 testIncorrectGetMoves :: [(RowNum, ColNum)]
 testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
@@ -254,7 +251,7 @@ testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
 -- gets the list of possible moves for a piece depending on its piece type
-getMoves :: Board -> (Location, Piece) -> [Location]
+getMoves :: Board -> (Location, Piece) -> [(RowNum, ColNum)]
 getMoves board (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
@@ -263,7 +260,7 @@ getMoves board (loc, piece) =
        else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
        else case pType piece of
-        King -> kingMove board loc color
+        King -> undefined
         Queen -> rows ++ cols ++ diags
             where
                 rows = rowMoves board loc color []
@@ -300,7 +297,7 @@ offset strs = offsetStr : strs
 -- Returns a nicely formatted string that represents the given board
 -- 
 -- Load this file into ghci and enter
-testDisplay = putStr $ displayBoard pawnTestBoard
+testDisplay = putStr $ displayBoard startingBoard
 -- To see the output for the starting position
 
 displayBoard :: Board -> String
@@ -338,24 +335,4 @@ lookupVal key lst = lookupHelper ([snd x | x <- lst, key == fst x])
 lookupHelper :: [b] -> Maybe b
 lookupHelper [x]  = Just x
 lookupHelper lst  = Nothing
-
-------------------------------------------------------------------
---                      Make Move
-------------------------------------------------------------------
-
-makeMove :: Board -> (Location, Piece) -> Location -> Board
-makeMove board (from, piece) to = let
-    possibleMoves = getMoves board (from, piece) 
-    in if to `elem` possibleMoves
-    then let remBoard = filter (/= (from, piece)) board
-    in (to, piece) : remBoard
-    else error "invalid move"
-    
-
-    
-
-
-
-
-
 
