@@ -356,31 +356,6 @@ makeMove board (from, piece) to = let
 --------------------------------------------
 --               Test Code
 -------------------------------------------
-testAllPieces :: Board -> [(Piece, [Location])]
-testAllPieces board = [(piece, getMoves board (loc, piece)) | (loc, piece) <- board]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
+testAllPieces :: Board -> [(Piece, [(Char, RowNum)])]
+testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (loc, piece) <- board]
 
