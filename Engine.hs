@@ -245,20 +245,20 @@ kingMove board loc@(x, y) color = filter (\pos -> shouldMove board pos color) po
         possibleLocs =
             [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
 
-testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
-
-testIncorrectGetMoves :: [(RowNum, ColNum)]
-testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
+--testGetMoves :: [(RowNum, ColNum)]
+--testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
+--need to change the boards to gamestates if you want to test
+--testIncorrectGetMoves :: [(RowNum, ColNum)]
+--testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
 
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
 -- gets the list of possible moves for a piece depending on its piece type
-getMoves :: Board -> (Location, Piece) -> [Location]
-getMoves board (loc, piece) =
+getMoves :: GameState -> (Location, Piece) -> [Location]
+getMoves (turn, board) (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
-    in if isNothing checkPiece
+    in if isNothing checkPiece && color == turn
        then error "no piece at location"
        else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
@@ -343,10 +343,11 @@ lookupHelper lst  = Nothing
 --                      Make Move
 ------------------------------------------------------------------
 
-makeMove :: Board -> (Location, Piece) -> Location -> Board
-makeMove board (from, piece) to = let
-    possibleMoves = getMoves board (from, piece) 
-    in if to `elem` possibleMoves
+makeMove :: GameState -> (Location, Piece) -> Location -> Board
+makeMove(turn, board) (from, piece) to = let
+    color = pColor piece
+    possibleMoves = getMoves (turn, board) (from, piece) 
+    in if to `elem` possibleMoves && color == turn
     then let remBoard = filter (/= (from, piece)) board
     in (to, piece) : remBoard
     else error "invalid move"
