@@ -219,7 +219,9 @@ pawnMove board loc@(col,row) color = let
             takeDownL = case downLeft of
                 Nothing -> False
                 x -> pColor (fromJust downLeft) == White
-            takeDownR = pColor (fromJust downRight) == White
+            takeDownR = case downRight of 
+                Nothing -> False
+                x -> pColor (fromJust downRight) == White
             in if takeDownL && takeDownR
             then [(col-1, row-1), (col+1, row-1)] else
             if takeDownL then [(col-1, row-1)] else
@@ -351,6 +353,29 @@ makeMove board (from, piece) to = let
     in (to, piece) : remBoard
     else error "invalid move"
     
+--------------------------------------------
+--               Test Code
+-------------------------------------------
+testAllPieces :: Board -> [(Piece, [Location])]
+testAllPieces board = [(piece, getMoves board (loc, piece)) | (loc, piece) <- board]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     
 
