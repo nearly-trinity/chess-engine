@@ -4,7 +4,6 @@ import Data.Maybe
 import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
 import qualified Data.Set as Set
 import Data.Char (isAsciiLower, isAsciiUpper, chr)
-import Text.XHtml.Frameset (cols)
 
 ----------------------------------------------------------------------------
 --                          Data Types and Aliases
@@ -31,6 +30,10 @@ data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq
 -- location using a tuple of row and column number
 type Location = (Int, Int)
 
+-- matrix notation
+type RowNum = Int
+type ColNum = Int
+
 -- uppercase letters are for pieces of white team; lowercase letters are for black team
 instance Show Piece where
     show (Piece White King) = "K"
@@ -46,9 +49,6 @@ instance Show Piece where
     show (Piece Black Knight) = "n"
     show (Piece Black Pawn) = "p"
 
--- matrix notation
-type RowNum = Int
-type ColNum = Int
 
 ----------------------------------------------------------------------------
 --                          Board Parser
@@ -78,12 +78,6 @@ getTurn :: GameState -> Color
 getTurn (turn,_) = turn
 getBoard :: GameState -> Board
 getBoard (_,board) = board
-
-startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-startingBoard = getBoard startingState
-
-midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R w KQkq - 0 11"
-midgameBoard = getBoard midgameState
 
 prettyBoard :: Board -> [((Char, RowNum), Piece)]
 prettyBoard = map (\((col,row), piece) -> ((chr (64+col),row), piece))
@@ -241,19 +235,11 @@ pawnMove board loc@(col,row) color = let
             [(col+1, row+1) | takeUpR]
     in moveSquares ++ captureSquares
 
-kingMove :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
-kingMove board loc@(x, y) color = filter (\pos -> shouldMove board pos color) possibleLocs
+kingMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) possibleLocs
     where
         possibleLocs =
             [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
-
-testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
-
-testIncorrectGetMoves :: [(RowNum, ColNum)]
-testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
-
-pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
 -- gets the list of possible moves for a piece depending on its piece type
 getMoves :: Board -> (Location, Piece) -> [Location]
@@ -265,7 +251,7 @@ getMoves board (loc, piece) =
        else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
        else case pType piece of
-        King -> kingMove board loc color
+        King -> kingMoves board loc color
         Queen -> rows ++ cols ++ diags
             where
                 rows = rowMoves board loc color []
@@ -299,11 +285,9 @@ format strs = concat $ strs ++ ["\n"]
 offset :: [String] -> [String]
 offset strs = offsetStr : strs
 
--- Returns a nicely formatted string that represents the given board
--- 
--- Load this file into ghci and enter
-testDisplay = putStr $ displayBoard pawnTestBoard
--- To see the output for the starting position
+-- Returns a nicely formatted string that represents a board
+printBoard :: Board -> IO ()
+printBoard board = putStr $ displayBoard board
 
 displayBoard :: Board -> String
 displayBoard b = makeRows b ++ makeLine ++ makeBorder
@@ -356,6 +340,21 @@ makeMove board (from, piece) to = let
 --------------------------------------------
 --               Test Code
 -------------------------------------------
+
+startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+startingBoard = getBoard startingState
+
+midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R w KQkq - 0 11"
+midgameBoard = getBoard midgameState
+
+pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+
+testGetMoves :: [(RowNum, ColNum)]
+testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
+
+testIncorrectGetMoves :: [(RowNum, ColNum)]
+testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
+
 testAllPieces :: Board -> [(Piece, [(Char, RowNum)])]
 testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (loc, piece) <- board]
 
