@@ -326,7 +326,7 @@ lookupHelper [x]  = Just x
 lookupHelper lst  = Nothing
 
 ------------------------------------------------------------------
---                      Make Move
+--                      Game Engine
 ------------------------------------------------------------------
 
 makeMove :: Board -> (Location, Piece) -> Location -> Board
@@ -336,6 +336,11 @@ makeMove board (from, piece) to = let
     then let remBoard = filter (/= (from, piece)) board
     in (to, piece) : remBoard
     else error "invalid move"
+    
+
+isWinner :: Board -> Won
+isWinner board = let pieces = [piece | (loc,piece) <- board]
+                 in not (Piece Black King `elem` pieces) || not (Piece White King `elem` pieces)
     
 --------------------------------------------
 --               Test Code
