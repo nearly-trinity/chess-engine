@@ -373,3 +373,7 @@ testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
 testAllPieces :: Board -> [(Piece, [(Char, RowNum)])]
 testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (loc, piece) <- board]
 -}
+
+--------------------------------------------
+--               IO Stuff
+--------------------------------------------               
