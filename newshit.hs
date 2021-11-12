@@ -193,47 +193,39 @@ knightMoves board loc@(x,y) color = filter (\pos -> shouldMove board pos color) 
 
 pawnMove :: Board -> (ColNum , RowNum) -> Color -> [(ColNum, RowNum)]
 pawnMove board loc@(col,row) color = let
+    -- for normal movement of pawn piece
     moveSquares = case color of
-        Black -> let -- if row number is 7 then we can move twice
-            oneDown = lookup (col, row-1) board
-            twoDown = lookup (col, row-2) board
-            in if isNothing oneDown && row == 7 && isNothing twoDown
-            then [(col, row-1), (col, row-2)] else
-            [(col, row-1) | isNothing oneDown]
-        White -> let -- if row number is 2 then we can move twice
-            oneUp = lookup (col, row+1) board
-            twoUp = lookup (col, row+2) board
-            in if isNothing oneUp && row == 2 && isNothing twoUp
-            then [(col, row+1), (col, row+2)] else
-            [(col, row+1) | isNothing oneUp]
+        Black -> -- if row number is 7 then we can move twice
+            pawnAdvance (\(col, row) -> (col, row-1)) (\(col, row) -> (col, row-2)) 7 
+        White -> -- if row number is 2 then we can move twice
+            pawnAdvance (\(col, row) -> (col, row+1)) (\(col, row) -> (col, row+2)) 2 
+    -- for when pawn can capture an enemy piece diagonally 
     captureSquares = case color of
-        Black -> let
-            downLeft  = lookup (col-1, row-1) board
-            downRight = lookup (col+1, row-1) board
-            takeDownL = case downLeft of
-                Nothing -> False
-                x -> pColor (fromJust downLeft) == White
-            takeDownR = case downRight of 
-                Nothing -> False
-                x -> pColor (fromJust downRight) == White
-            in if takeDownL && takeDownR
-            then [(col-1, row-1), (col+1, row-1)] else
-            if takeDownL then [(col-1, row-1)] else
-            [(col+1, row-1) | takeDownR]
-        White -> let
-            upLeft  = lookup (col-1, row+1) board
-            upRight = lookup (col+1, row+1) board
-            takeUpL = case upLeft of
-                Nothing -> False
-                x -> pColor (fromJust upLeft)  == Black
-            takeUpR = case upRight of
-                Nothing -> False
-                x -> pColor (fromJust upRight) == Black
-            in if takeUpL && takeUpR
-            then [(col-1, row+1), (col+1, row+1)] else
-            if takeUpL then [(col-1, row+1)] else
-            [(col+1, row+1) | takeUpR]
+        Black -> 
+            pawnCapture (\(col, row) -> (col-1, row-1)) (\(col, row) -> (col+1, row-1))
+        White -> 
+            pawnCapture (\(col, row) -> (col-1, row+1)) (\(col, row) -> (col+1, row+1))
     in moveSquares ++ captureSquares
+    where
+        pawnAdvance f1 f2 strtRow = 
+            let oneAdvance = lookup (f1 loc) board
+                twoAdvance = lookup (f2 loc) board
+            in  if isNothing oneAdvance && row == strtRow && isNothing twoAdvance
+                then [f1 loc, f2 loc] else
+                [f1 loc | isNothing oneAdvance]
+        pawnCapture f1 f2 = 
+            let leftAdvance  = lookup (f1 loc) board
+                rightAdvance = lookup (f2 loc) board
+                leftCap = case leftAdvance of
+                    Nothing -> False
+                    x -> pColor (fromJust leftAdvance) /= color
+                rightCap = case rightAdvance of 
+                    Nothing -> False
+                    x -> pColor (fromJust rightAdvance) /= color
+            in  if leftCap && rightCap
+                    then [f1 loc, f2 loc] else
+                if leftCap then [f1 loc] else
+                    [f2 loc | rightCap]
 
 kingMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
 kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) possibleLocs
@@ -286,8 +278,8 @@ offset :: [String] -> [String]
 offset strs = offsetStr : strs
 
 -- Returns a nicely formatted string that represents a board
-printBoard :: Board -> IO ()
-printBoard board = putStr $ displayBoard board
+printBoard :: GameState -> IO ()
+printBoard (_,board) = putStr $ displayBoard board
 
 displayBoard :: Board -> String
 displayBoard b = makeRows b ++ makeLine ++ makeBorder
@@ -356,7 +348,7 @@ midgameBoard = getBoard midgameState
 pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
 testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves pawnTestState ((5,1),Piece White King)
+testGetMoves = getMoves pawnTestState ((5,5),Piece Black Pawn)
 
 testIncorrectGetMoves :: [(RowNum, ColNum)]
 testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
