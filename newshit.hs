@@ -347,21 +347,20 @@ isWinner board = let pieces = [piece | (loc,piece) <- board]
 --               Test Code
 -------------------------------------------
 
-{-
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
 
 midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R w KQkq - 0 11"
 midgameBoard = getBoard midgameState
 
-pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
 testGetMoves :: [(RowNum, ColNum)]
-testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
+testGetMoves = getMoves pawnTestState ((5,1),Piece White King)
 
 testIncorrectGetMoves :: [(RowNum, ColNum)]
-testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
+testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
 
-testAllPieces :: Board -> [(Piece, [(Char, RowNum)])]
-testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (loc, piece) <- board]
--}
+testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
+testAllPieces state@(_,board) = [(piece, prettyMoves  $ getMoves state (loc, piece)) | (loc, piece) <- board]
+
