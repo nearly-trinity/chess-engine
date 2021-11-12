@@ -380,8 +380,12 @@ loadGame f =
     do gs <- readFile f
        return (readState gs)
 
+reverseState :: GameState -> String
+reverseState gs = "test"
+
 writeGame :: GameState -> FilePath -> IO ()
-writeGame gs f = undefined
+writeGame gs f =
+    do writeFile f (reverseState gs)
 
 putWinner :: GameState -> IO ()
 putWinner gs = undefined
