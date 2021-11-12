@@ -286,8 +286,8 @@ offset :: [String] -> [String]
 offset strs = offsetStr : strs
 
 -- Returns a nicely formatted string that represents a board
-printBoard :: Board -> IO ()
-printBoard board = putStr $ displayBoard board
+printBoard :: GameState -> IO ()
+printBoard (turn, board) = putStr $ displayBoard board
 
 displayBoard :: Board -> String
 displayBoard b = makeRows b ++ makeLine ++ makeBorder
@@ -347,7 +347,6 @@ isWinner board = let pieces = [piece | (loc,piece) <- board]
 --               Test Code
 -------------------------------------------
 
-{-
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
 
@@ -355,7 +354,7 @@ midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R
 midgameBoard = getBoard midgameState
 
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
-
+{-
 testGetMoves :: [(RowNum, ColNum)]
 testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
 
