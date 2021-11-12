@@ -343,6 +343,38 @@ isWinner :: Board -> Won
 isWinner board = let pieces = [piece | (loc,piece) <- board]
                  in not (Piece Black King `elem` pieces) || not (Piece White King `elem` pieces)
     
+
+type EvalScore = Rational
+type ColoredPieces = [(Location, Piece)]
+
+(whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) (pawnTestBoard)
+
+materialScore :: ColoredPieces -> Int
+materialScore [] = 0   
+materialScore ((loc,p):ps) = case pType p of 
+    Queen -> 9 + materialScore ps
+    Rook -> 5 + materialScore ps
+    Bishop -> 3 + materialScore ps
+    Knight -> 3 + materialScore ps
+    Pawn -> 1 + materialScore ps
+    x -> 0 + materialScore ps
+
+evaluate :: Board -> ColoredPieces -> EvalScore
+evaluate board pieces = undefined
+    
+
+-- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
+-- use some evaluation funtion to calculate the position
+{-
+eval :: GameState -> EvalScore
+eval (turn, board) = let
+    (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
+    whiteScore = evaluate whitePos
+    blackScore = evaluate blackPos
+    in (whiteScore - blackScore)
+-}
+
+
 --------------------------------------------
 --               Test Code
 -------------------------------------------
