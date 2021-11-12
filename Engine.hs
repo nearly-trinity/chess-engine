@@ -284,10 +284,7 @@ offsetStr = "  "
 
 -- Returns the concatenation of the strings with a newline added at the end
 format :: [String] -> String
-format strs = concat $ strmport Data.Char
-  2 import System.IO
-  3 import System.Environment
-s ++ ["\n"]
+format strs = concat $ strs ++ ["\n"]
 
 -- Returns the strings with an offset at the front
 offset :: [String] -> [String]
