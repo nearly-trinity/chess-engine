@@ -3,7 +3,12 @@ import Data.List.Split
 import Data.Maybe
 import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
 import qualified Data.Set as Set
-import Data.Char (isAsciiLower, isAsciiUpper, chr)
+--import Data.Char (isAsciiLower, isAsciiUpper, chr)
+import Data.Char
+import System.IO
+import System.Environment
+
+
 
 ----------------------------------------------------------------------------
 --                          Data Types and Aliases
@@ -279,7 +284,10 @@ offsetStr = "  "
 
 -- Returns the concatenation of the strings with a newline added at the end
 format :: [String] -> String
-format strs = concat $ strs ++ ["\n"]
+format strs = concat $ strmport Data.Char
+  2 import System.IO
+  3 import System.Environment
+s ++ ["\n"]
 
 -- Returns the strings with an offset at the front
 offset :: [String] -> [String]
