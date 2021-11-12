@@ -378,8 +378,10 @@ testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (lo
 --               IO Stuff
 --------------------------------------------               
 
-loadGame :: FilePath -> IO ()
-loadGame f = undefined
+loadGame :: FilePath -> IO GameState
+loadGame f =
+    do gs <- readFile f
+       return (readState gs)
 
 writeGame :: GameState -> FilePath -> IO ()
 writeGame gs f = undefined
