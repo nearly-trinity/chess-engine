@@ -377,3 +377,12 @@ testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (lo
 --------------------------------------------
 --               IO Stuff
 --------------------------------------------               
+
+loadGame :: FilePath -> IO ()
+loadGame f = undefined
+
+writeGame :: GameState -> FilePath -> IO ()
+writeGame gs f = undefined
+
+putWinner :: GameState -> IO ()
+putWinner gs = undefined
