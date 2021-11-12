@@ -241,17 +241,6 @@ kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) p
         possibleLocs =
             [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
 
-<<<<<<< HEAD
---testGetMoves :: [(RowNum, ColNum)]
---testGetMoves = getMoves pawnTestBoard ((5,1),Piece White King)
---need to change the boards to gamestates if you want to test
---testIncorrectGetMoves :: [(RowNum, ColNum)]
---testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
-
-pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
-
-=======
->>>>>>> 6b203001adbc3e6071f01fe5f5c2d32eff3e8841
 -- gets the list of possible moves for a piece depending on its piece type
 getMoves :: GameState -> (Location, Piece) -> [Location]
 getMoves (turn, board) (loc, piece) =
@@ -341,7 +330,7 @@ lookupHelper lst  = Nothing
 ------------------------------------------------------------------
 
 makeMove :: GameState -> (Location, Piece) -> Location -> Board
-makeMove(turn, board) (from, piece) to = let
+makeMove (turn, board) (from, piece) to = let
     color = pColor piece
     possibleMoves = getMoves (turn, board) (from, piece) 
     in if to `elem` possibleMoves && color == turn
@@ -358,6 +347,7 @@ isWinner board = let pieces = [piece | (loc,piece) <- board]
 --               Test Code
 -------------------------------------------
 
+{-
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
 
@@ -374,4 +364,4 @@ testIncorrectGetMoves = getMoves startingBoard ((2,5),Piece White Knight)
 
 testAllPieces :: Board -> [(Piece, [(Char, RowNum)])]
 testAllPieces board = [(piece, prettyMoves  $ getMoves board (loc, piece)) | (loc, piece) <- board]
-
+-}
