@@ -349,6 +349,11 @@ type ColoredPieces = [(Location, Piece)]
 
 (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) (pawnTestBoard)
 
+mobilityScore :: GameState -> ColoredPieces -> Int
+mobilityScore (turn,board) pieces = let
+    allMoves = [getMoves (turn,board) piece | piece <- pieces]
+    in length $ concat allMoves
+
 materialScore :: ColoredPieces -> Int
 materialScore [] = 0   
 materialScore ((loc,p):ps) = case pType p of 
@@ -359,9 +364,11 @@ materialScore ((loc,p):ps) = case pType p of
     Pawn -> 1 + materialScore ps
     x -> 0 + materialScore ps
 
-evaluate :: Board -> ColoredPieces -> EvalScore
-evaluate board pieces = undefined
-    
+-- evaluate :: Board -> ColoredPieces -> EvalScore
+evaluate (turn, board) = let
+    (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
+    in materialScore whitePos - materialScore blackPos
+
 
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
 -- use some evaluation funtion to calculate the position
@@ -385,6 +392,10 @@ startingBoard = getBoard startingState
 midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R w KQkq - 0 11"
 midgameBoard = getBoard midgameState
 
+sampleState = readState "r1b1kb1r/ppp1pppp/8/3pn3/3P4/4P1P1/P2N1PP1/3K1B1R w kq - 0 13"
+blkFavBoard = getBoard sampleState
+
+pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 {-
 testGetMoves :: [(RowNum, ColNum)]
