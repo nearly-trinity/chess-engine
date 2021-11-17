@@ -17,7 +17,9 @@ import System.Environment
 type GameState = (Color, Board)
 
 -- bool to determine end game state
-type Won = Bool
+data Outcome = Win Color | Tie deriving (Show, Eq)
+
+data Turn = TColor Color deriving (Show, Eq)
 
 -- board is a list of location and the piece on that location
 type Board = [(Location, Piece)]
@@ -196,30 +198,30 @@ pawnMove board loc@(col,row) color = let
     -- for normal movement of pawn piece
     moveSquares = case color of
         Black -> -- if row number is 7 then we can move twice
-            pawnAdvance (\(col, row) -> (col, row-1)) (\(col, row) -> (col, row-2)) 7 
+            pawnAdvance (\(col, row) -> (col, row-1)) (\(col, row) -> (col, row-2)) 7
         White -> -- if row number is 2 then we can move twice
-            pawnAdvance (\(col, row) -> (col, row+1)) (\(col, row) -> (col, row+2)) 2 
+            pawnAdvance (\(col, row) -> (col, row+1)) (\(col, row) -> (col, row+2)) 2
     -- for when pawn can capture an enemy piece diagonally 
     captureSquares = case color of
-        Black -> 
+        Black ->
             pawnCapture (\(col, row) -> (col-1, row-1)) (\(col, row) -> (col+1, row-1))
-        White -> 
+        White ->
             pawnCapture (\(col, row) -> (col-1, row+1)) (\(col, row) -> (col+1, row+1))
     in moveSquares ++ captureSquares
     where
-        pawnAdvance f1 f2 strtRow = 
+        pawnAdvance f1 f2 strtRow =
             let oneAdvance = lookup (f1 loc) board
                 twoAdvance = lookup (f2 loc) board
             in  if isNothing oneAdvance && row == strtRow && isNothing twoAdvance
                 then [f1 loc, f2 loc] else
                 [f1 loc | isNothing oneAdvance]
-        pawnCapture f1 f2 = 
+        pawnCapture f1 f2 =
             let leftAdvance  = lookup (f1 loc) board
                 rightAdvance = lookup (f2 loc) board
                 leftCap = case leftAdvance of
                     Nothing -> False
                     x -> pColor (fromJust leftAdvance) /= color
-                rightCap = case rightAdvance of 
+                rightCap = case rightAdvance of
                     Nothing -> False
                     x -> pColor (fromJust rightAdvance) /= color
             in  if leftCap && rightCap
@@ -242,7 +244,7 @@ getMoves (turn, board) (loc, piece) =
        then error "no piece at location"
        else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
-       else let 
+       else let
        locs = case pType piece of
          King -> kingMoves board loc color
          Queen -> rows ++ cols ++ diags
@@ -335,16 +337,23 @@ makeMove (turn, board) (from, piece) to = let
     then let remBoard = filter (/= (from, piece)) board
     in (opColor color, (to, piece) : remBoard)
     else error "invalid move"
-    
 
-isWinner :: Board -> Won
+
+isWinner :: Board -> Maybe Outcome
 isWinner board = let pieces = [piece | (loc,piece) <- board]
-                 in not (Piece Black King `elem` pieces) || not (Piece White King `elem` pieces)
-    
+                 in
+                     if elem (Piece Black King) pieces && notElem (Piece White King) pieces
+                         then Just (Win Black)
+                     else if elem (Piece White King) pieces && notElem (Piece Black King) pieces
+                         then Just (Win White)
+                     else if notElem (Piece White King) pieces && notElem (Piece Black King) pieces
+                         then error "invalid board: both kings do not exist"
+                     else Nothing
+
 type EvalScore = Double
 type ColoredPieces = [(Location, Piece)]
 
-(whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) (blackTurnBoard)
+(whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) blackTurnBoard
 
 mobilityScore :: GameState -> ColoredPieces -> Int
 mobilityScore state pieces = let
@@ -352,8 +361,8 @@ mobilityScore state pieces = let
     in length $ concat allMoves
 
 materialScore :: ColoredPieces -> Int
-materialScore [] = 0   
-materialScore ((loc,p):ps) = case pType p of 
+materialScore [] = 0
+materialScore ((loc,p):ps) = case pType p of
     Queen -> 9 + materialScore ps
     Rook -> 5 + materialScore ps
     Bishop -> 3 + materialScore ps
@@ -368,7 +377,7 @@ eval (turn, board) = let
     whiteMobile = mobilityScore (turn,board) whitePos
     blackMobile = mobilityScore (turn,board) blackPos
     mobScore = fromIntegral (whiteMobile - blackMobile) / 5
-    in (fromIntegral matScore) + mobScore
+    in fromIntegral matScore + mobScore
 
 
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
@@ -423,6 +432,9 @@ sampleBoard2 = snd sampleState2
 pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 
+winnerState = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
+winnerBoard = snd $ readState "8/8/8/8/8/8/8/8 w kq - 2 10"
+
 {-
 testGetMoves :: [(RowNum, ColNum)]
 testGetMoves = getMoves pawnTestState ((5,5),Piece Black Pawn)
@@ -444,19 +456,19 @@ loadGame f =
 
 writeGame :: GameState -> FilePath -> IO ()
 writeGame gs f =
-    do writeFile f (toFEN gs)
+    writeFile f (toFEN gs)
 
 toFEN :: GameState -> String
-toFEN (c, b) = 
+toFEN (c, b) =
     let rowsFEN = map (rowToFEN b) [8,7..1]
     in concat $ rowsFEN ++ [" w "]
 
 rowToFEN :: Board -> Int -> String
-rowToFEN b r = 
+rowToFEN b r =
     let rowStr = map (makePiece b) ([(i, r) | i <- [1 .. 8]])
-        groups = groupBy (\x y -> not $ (x == " " || y == " ") && (x /= y)) rowStr
-        fen = map (\lst -> if((head lst) == " ") then show $ length lst else concat lst) groups
-    in concat $ if(r /= 1) then fen ++ ["/"] else fen 
+        groups = groupBy (\x y -> not $ (x == " " || y == " ") && x /= y) rowStr
+        fen = map (\lst -> if head lst == " " then show $ length lst else concat lst) groups
+    in concat $ if r /= 1 then fen ++ ["/"] else fen
 
 putWinner :: GameState -> IO ()
 putWinner gs = undefined
