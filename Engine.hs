@@ -1,3 +1,5 @@
+module Engine where 
+
 import Data.List
 import Data.List.Split
 import Data.Maybe
@@ -267,6 +269,7 @@ getMoves (turn, board) (loc, piece) =
 -- converts col numbers to letters like a typical chess board
 prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
 prettyMoves = map (\(col, row) -> (chr (64 + col), row))
+{-
 ----------------------------------------------------------------------------
 --                          Display Board
 ---------------------------------------------------------------------------- 
@@ -321,7 +324,7 @@ lookupVal key lst = lookupHelper ([snd x | x <- lst, key == fst x])
 lookupHelper :: [b] -> Maybe b
 lookupHelper [x]  = Just x
 lookupHelper lst  = Nothing
-
+-}
 ------------------------------------------------------------------
 --                      Game Engine
 ------------------------------------------------------------------
@@ -360,7 +363,7 @@ testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
 
 testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
 testAllPieces state@(_,board) = [(piece, prettyMoves  $ getMoves state (loc, piece)) | (loc, piece) <- board]
-
+{-
 --------------------------------------------
 --               IO Stuff
 --------------------------------------------               
@@ -388,3 +391,4 @@ rowToFEN b r =
 
 putWinner :: GameState -> IO ()
 putWinner gs = undefined
+-}
