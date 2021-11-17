@@ -241,7 +241,7 @@ getMoves (turn, board) (loc, piece) =
     in if isNothing checkPiece && color == turn
        then error "no piece at location"
        else if fromJust checkPiece /= piece
-       then error "incorrect piece at location"
+       then error $ "incorrect piece at location" ++ (show (fromJust checkPiece)) ++ ", " ++ show piece
        else let 
        locs = case pType piece of
          King -> kingMoves board loc color
@@ -330,11 +330,16 @@ opColor White = Black
 makeMove :: GameState -> (Location, Piece) -> Location -> GameState
 makeMove (turn, board) (from, piece) to = let
     color = pColor piece
+    capPiece = (to, fromJust $ lookup to board)
+    capBoard = filter (\p -> p /= (from,piece) && p /= capPiece) board
+    remBoard = filter (/= (from, piece)) board
     possibleMoves = map fst $ getMoves (turn, board) (from, piece) 
-    in if to `elem` possibleMoves && color == turn
-    then let remBoard = filter (/= (from, piece)) board
-    in (opColor color, (to, piece) : remBoard)
-    else error "invalid move"
+    in 
+        if to `elem` possibleMoves && color == turn then 
+            if not (isNothing (lookup to board)) -- if we need to caputure a piece
+                then (opColor color, (to, piece):capBoard)
+            else (opColor color, (to, piece):remBoard)
+        else error "invalid move"
     
 
 isWinner :: Board -> Won
@@ -395,7 +400,9 @@ bestPlay curState@(turn, board) = let
     allMoves = [(p, getMoves curState p) | p <- board, pColor (snd p) == turn]
     nextStates = concat [statesForPiece curState piece moves | (piece, moves) <- allMoves]
     evalStates = map (\(mv, state) -> (eval state, (mv,state))) nextStates
-    in fst $ snd $ maximum evalStates
+    in case turn of 
+        Black -> fst $ snd $ minimum evalStates 
+        White -> fst $ snd $ maximum evalStates
 
 
 --------------------------------------------
