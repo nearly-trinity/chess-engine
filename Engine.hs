@@ -236,7 +236,7 @@ kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) p
             [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
 
 -- gets the list of possible moves for a piece depending on its piece type
-getMoves :: GameState -> (Location, Piece) -> [(Piece, Location)]
+getMoves :: GameState -> (Location, Piece) -> [(Location, Piece)]
 getMoves (turn, board) (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
@@ -261,7 +261,7 @@ getMoves (turn, board) (loc, piece) =
                  diags = diagMoves board loc color []
          Knight -> knightMoves board loc color
          Pawn -> pawnMove board loc color
-       in map (\loc -> (piece, loc)) locs
+       in map (\loc -> (loc, piece)) locs
 
 -- converts col numbers to letters like a typical chess board
 prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
@@ -332,7 +332,7 @@ opColor White = Black
 makeMove :: GameState -> (Location, Piece) -> Location -> GameState
 makeMove (turn, board) (from, piece) to = let
     color = pColor piece
-    possibleMoves = map snd $ getMoves (turn, board) (from, piece)
+    possibleMoves = map fst $ getMoves (turn, board) (from, piece) 
     in if to `elem` possibleMoves && color == turn
     then let remBoard = filter (/= (from, piece)) board
     in (opColor color, (to, piece) : remBoard)
@@ -370,8 +370,8 @@ materialScore ((loc,p):ps) = case pType p of
     Pawn -> 1 + materialScore ps
     x -> 0 + materialScore ps
 
-evaluate :: GameState -> EvalScore
-evaluate (turn, board) = let
+eval :: GameState -> EvalScore
+eval (turn, board) = let
     (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
     matScore = materialScore whitePos - materialScore blackPos
     whiteMobile = mobilityScore (turn,board) whitePos
@@ -387,20 +387,32 @@ evaluate (turn, board) = let
 --               Best Play
 -------------------------------------------
 
-maxDepth = 10
+maxDepth = 4
 type Move = (Location, Piece)
-
+type PieceLocation = (Location, Piece)
 -- generate the game tree by evaluating every possible move for every piece
 -- generate all moves: [getMoves GameState piece | piece <- All Pieces]
+-- for each move in all moves, call makeMove to return the updated GameState and do this recursively
+-- p :: (Location, Piece)
+-- allMoves :: list of tuple of piece that is being moves and all of its possible moves
 
+statesForPiece :: GameState -> PieceLocation -> [Move] -> [(Move, GameState)]
+statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves] 
 
 bestPlay :: GameState -> Move
-bestPlay (turn, board) = undefined
+bestPlay curState@(turn, board) = let
+    allMoves = [(p, getMoves curState p) | p <- board, pColor (snd p) == turn]
+    nextStates = concat [statesForPiece curState piece moves | (piece, moves) <- allMoves]
+    evalStates = map (\(mv, state) -> (eval state, (mv,state))) nextStates
+    in fst $ snd $ maximum evalStates
 
 
 --------------------------------------------
 --               Test Code
 -------------------------------------------
+
+obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
+obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
 
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
