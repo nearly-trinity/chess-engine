@@ -346,9 +346,9 @@ isWinner board = let pieces = [piece | (loc,piece) <- board]
                          then Just (Win Black)
                      else if elem (Piece White King) pieces && notElem (Piece Black King) pieces
                          then Just (Win White)
+                     else if notElem (Piece White King) pieces && notElem (Piece Black King) pieces
+                         then error "invalid board: both kings do not exist"
                      else Nothing
-
-
 
 type EvalScore = Double
 type ColoredPieces = [(Location, Piece)]
@@ -419,6 +419,9 @@ sampleBoard2 = snd sampleState2
 
 pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+
+winnerState = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
+winnerBoard = snd $ readState "8/8/8/8/8/8/8/8 w kq - 2 10"
 
 {-
 testGetMoves :: [(RowNum, ColNum)]
