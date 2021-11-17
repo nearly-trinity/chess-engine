@@ -87,6 +87,8 @@ getBoard (_,board) = board
 prettyBoard :: Board -> [((Char, RowNum), Piece)]
 prettyBoard = map (\((col,row), piece) -> ((chr (64+col),row), piece))
 
+
+-- blackTurnState = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
 -- parses the FEN notation
 readState :: String -> GameState
 readState input = let
@@ -95,14 +97,9 @@ readState input = let
         "w" -> White
         "b" -> Black
         x -> error "invalid turn"
-    board = case head rest of
-        "w" -> let
-            rows = [8,7..1] `zip` splitOn "/" boardData
-            in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-        "b" -> let
-            rows = [1..8] `zip` splitOn "/" boardData
-            in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-        x -> error "invalid turn"
+    board = let
+        rows = [8,7..1] `zip` splitOn "/" boardData
+        in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
     in (turn, catMaybes board)
 
 -- helper for readBoard
@@ -341,14 +338,14 @@ isWinner board = let pieces = [piece | (loc,piece) <- board]
                  in not (Piece Black King `elem` pieces) || not (Piece White King `elem` pieces)
     
 
-type EvalScore = Rational
+type EvalScore = Double
 type ColoredPieces = [(Location, Piece)]
 
-(whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) (pawnTestBoard)
+(whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) (blackTurnBoard)
 
 mobilityScore :: GameState -> ColoredPieces -> Int
-mobilityScore (turn,board) pieces = let
-    allMoves = [getMoves (turn,board) piece | piece <- pieces]
+mobilityScore state pieces = let
+    allMoves = [getMoves state piece | piece <- pieces]
     in length $ concat allMoves
 
 materialScore :: ColoredPieces -> Int
@@ -361,10 +358,14 @@ materialScore ((loc,p):ps) = case pType p of
     Pawn -> 1 + materialScore ps
     x -> 0 + materialScore ps
 
--- evaluate :: Board -> ColoredPieces -> EvalScore
+evaluate :: GameState -> EvalScore
 evaluate (turn, board) = let
     (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
-    in materialScore whitePos - materialScore blackPos
+    matScore = materialScore whitePos - materialScore blackPos
+    whiteMobile = mobilityScore (turn,board) whitePos
+    blackMobile = mobilityScore (turn,board) blackPos
+    mobScore = fromIntegral (whiteMobile - blackMobile) / 5
+    in (fromIntegral matScore) + mobScore
 
 
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
@@ -391,6 +392,11 @@ midgameBoard = getBoard midgameState
 
 sampleState = readState "r1b1kb1r/ppp1pppp/8/3pn3/3P4/4P1P1/P2N1PP1/3K1B1R w kq - 0 13"
 blkFavBoard = getBoard sampleState
+
+blackTurnState = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
+blackTurnBoard = snd blackTurnState
+
+sample2State = readState "r1b4r/p2k1pbp/1qp2np1/3P4/2pP4/2N2N2/PP2QPPP/R1B1K2R w KQ - 1 13"
 
 pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
 pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
