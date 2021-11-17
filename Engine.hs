@@ -405,7 +405,7 @@ type PieceLocation = (Location, Piece)
 
 statesForPiece :: GameState -> PieceLocation -> [Move] -> [(Move, GameState)]
 statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves] 
-
+ 
 bestPlay :: GameState -> Move
 bestPlay curState@(turn, board) = let
     allMoves = [(p, getMoves curState p) | p <- board, pColor (snd p) == turn]
