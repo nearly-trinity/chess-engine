@@ -17,9 +17,9 @@ import System.Environment
 type GameState = (Color, Board)
 
 -- bool to determine end game state
-type Won = Bool
+data Outcome = Win Color | Tie deriving (Show, Eq)
 
-newtype Turn = TColor Color deriving (Show, Eq)
+data Turn = TColor Color deriving (Show, Eq)
 
 -- board is a list of location and the piece on that location
 type Board = [(Location, Piece)]
@@ -87,6 +87,8 @@ getBoard (_,board) = board
 prettyBoard :: Board -> [((Char, RowNum), Piece)]
 prettyBoard = map (\((col,row), piece) -> ((chr (64+col),row), piece))
 
+
+-- blackTurnState = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
 -- parses the FEN notation
 readState :: String -> GameState
 readState input = let
@@ -95,14 +97,9 @@ readState input = let
         "w" -> White
         "b" -> Black
         x -> error "invalid turn"
-    board = case head rest of
-        "w" -> let
-            rows = [8,7..1] `zip` splitOn "/" boardData
-            in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-        "b" -> let
-            rows = [1..8] `zip` splitOn "/" boardData
-            in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-        x -> error "invalid turn"
+    board = let
+        rows = [8,7..1] `zip` splitOn "/" boardData
+        in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
     in (turn, catMaybes board)
 
 -- helper for readBoard
@@ -201,30 +198,30 @@ pawnMove board loc@(col,row) color = let
     -- for normal movement of pawn piece
     moveSquares = case color of
         Black -> -- if row number is 7 then we can move twice
-            pawnAdvance (\(col, row) -> (col, row-1)) (\(col, row) -> (col, row-2)) 7 
+            pawnAdvance (\(col, row) -> (col, row-1)) (\(col, row) -> (col, row-2)) 7
         White -> -- if row number is 2 then we can move twice
-            pawnAdvance (\(col, row) -> (col, row+1)) (\(col, row) -> (col, row+2)) 2 
+            pawnAdvance (\(col, row) -> (col, row+1)) (\(col, row) -> (col, row+2)) 2
     -- for when pawn can capture an enemy piece diagonally 
     captureSquares = case color of
-        Black -> 
+        Black ->
             pawnCapture (\(col, row) -> (col-1, row-1)) (\(col, row) -> (col+1, row-1))
-        White -> 
+        White ->
             pawnCapture (\(col, row) -> (col-1, row+1)) (\(col, row) -> (col+1, row+1))
     in moveSquares ++ captureSquares
     where
-        pawnAdvance f1 f2 strtRow = 
+        pawnAdvance f1 f2 strtRow =
             let oneAdvance = lookup (f1 loc) board
                 twoAdvance = lookup (f2 loc) board
             in  if isNothing oneAdvance && row == strtRow && isNothing twoAdvance
                 then [f1 loc, f2 loc] else
                 [f1 loc | isNothing oneAdvance]
-        pawnCapture f1 f2 = 
+        pawnCapture f1 f2 =
             let leftAdvance  = lookup (f1 loc) board
                 rightAdvance = lookup (f2 loc) board
                 leftCap = case leftAdvance of
                     Nothing -> False
                     x -> pColor (fromJust leftAdvance) /= color
-                rightCap = case rightAdvance of 
+                rightCap = case rightAdvance of
                     Nothing -> False
                     x -> pColor (fromJust rightAdvance) /= color
             in  if leftCap && rightCap
@@ -239,7 +236,7 @@ kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) p
             [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
 
 -- gets the list of possible moves for a piece depending on its piece type
-getMoves :: GameState -> (Location, Piece) -> [Location]
+getMoves :: GameState -> (Location, Piece) -> [(Location, Piece)]
 getMoves (turn, board) (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
@@ -247,22 +244,24 @@ getMoves (turn, board) (loc, piece) =
        then error "no piece at location"
        else if fromJust checkPiece /= piece
        then error "incorrect piece at location"
-       else case pType piece of
-        King -> kingMoves board loc color
-        Queen -> rows ++ cols ++ diags
-            where
-                rows = rowMoves board loc color []
-                cols = colMoves board loc color []
-                diags = diagMoves board loc color []
-        Rook -> rows ++ cols
-            where
-                rows = rowMoves board loc color []
-                cols = colMoves board loc color []
-        Bishop -> diags
-            where
-                diags = diagMoves board loc color []
-        Knight -> knightMoves board loc color
-        Pawn -> pawnMove board loc color
+       else let
+       locs = case pType piece of
+         King -> kingMoves board loc color
+         Queen -> rows ++ cols ++ diags
+             where
+                 rows = rowMoves board loc color []
+                 cols = colMoves board loc color []
+                 diags = diagMoves board loc color []
+         Rook -> rows ++ cols
+             where
+                 rows = rowMoves board loc color []
+                 cols = colMoves board loc color []
+         Bishop -> diags
+             where
+                 diags = diagMoves board loc color []
+         Knight -> knightMoves board loc color
+         Pawn -> pawnMove board loc color
+       in map (\loc -> (loc, piece)) locs
 
 -- converts col numbers to letters like a typical chess board
 prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
@@ -326,23 +325,94 @@ lookupHelper lst  = Nothing
 --                      Game Engine
 ------------------------------------------------------------------
 
-makeMove :: GameState -> (Location, Piece) -> Location -> Board
+opColor :: Color -> Color
+opColor Black = White
+opColor White = Black
+
+makeMove :: GameState -> (Location, Piece) -> Location -> GameState
 makeMove (turn, board) (from, piece) to = let
     color = pColor piece
-    possibleMoves = getMoves (turn, board) (from, piece) 
+    possibleMoves = map fst $ getMoves (turn, board) (from, piece) 
     in if to `elem` possibleMoves && color == turn
     then let remBoard = filter (/= (from, piece)) board
-    in (to, piece) : remBoard
+    in (opColor color, (to, piece) : remBoard)
     else error "invalid move"
-    
 
-isWinner :: Board -> Won
+
+isWinner :: Board -> Maybe Outcome
 isWinner board = let pieces = [piece | (loc,piece) <- board]
-                 in not (Piece Black King `elem` pieces) || not (Piece White King `elem` pieces)
-    
+                 in
+                     if elem (Piece Black King) pieces && notElem (Piece White King) pieces
+                         then Just (Win Black)
+                     else if elem (Piece White King) pieces && notElem (Piece Black King) pieces
+                         then Just (Win White)
+                     else if notElem (Piece White King) pieces && notElem (Piece Black King) pieces
+                         then error "invalid board: both kings do not exist"
+                     else Nothing
+
+type EvalScore = Double
+type ColoredPieces = [(Location, Piece)]
+
+(whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) blackTurnBoard
+
+mobilityScore :: GameState -> ColoredPieces -> Int
+mobilityScore state pieces = let
+    allMoves = [getMoves state piece | piece <- pieces]
+    in length $ concat allMoves
+
+materialScore :: ColoredPieces -> Int
+materialScore [] = 0
+materialScore ((loc,p):ps) = case pType p of
+    Queen -> 9 + materialScore ps
+    Rook -> 5 + materialScore ps
+    Bishop -> 3 + materialScore ps
+    Knight -> 3 + materialScore ps
+    Pawn -> 1 + materialScore ps
+    x -> 0 + materialScore ps
+
+eval :: GameState -> EvalScore
+eval (turn, board) = let
+    (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
+    matScore = materialScore whitePos - materialScore blackPos
+    whiteMobile = mobilityScore (turn,board) whitePos
+    blackMobile = mobilityScore (turn,board) blackPos
+    mobScore = fromIntegral (whiteMobile - blackMobile) / 5
+    in fromIntegral matScore + mobScore
+
+
+-- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
+-- use some evaluation funtion to calculate the position
+
+--------------------------------------------
+--               Best Play
+-------------------------------------------
+
+maxDepth = 4
+type Move = (Location, Piece)
+type PieceLocation = (Location, Piece)
+-- generate the game tree by evaluating every possible move for every piece
+-- generate all moves: [getMoves GameState piece | piece <- All Pieces]
+-- for each move in all moves, call makeMove to return the updated GameState and do this recursively
+-- p :: (Location, Piece)
+-- allMoves :: list of tuple of piece that is being moves and all of its possible moves
+
+statesForPiece :: GameState -> PieceLocation -> [Move] -> [(Move, GameState)]
+statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves] 
+
+bestPlay :: GameState -> Move
+bestPlay curState@(turn, board) = let
+    allMoves = [(p, getMoves curState p) | p <- board, pColor (snd p) == turn]
+    nextStates = concat [statesForPiece curState piece moves | (piece, moves) <- allMoves]
+    evalStates = map (\(mv, state) -> (eval state, (mv,state))) nextStates
+    in fst $ snd $ maximum evalStates
+
+
 --------------------------------------------
 --               Test Code
 -------------------------------------------
+
+obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
+obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
 
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 startingBoard = getBoard startingState
@@ -350,8 +420,22 @@ startingBoard = getBoard startingState
 midgameState = readState "r1b1kb1r/p4p1p/1qp2np1/3p4/2pP4/2N1PN2/PP2QPPP/R1B1K2R w KQkq - 0 11"
 midgameBoard = getBoard midgameState
 
-pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+sampleState = readState "r1b1kb1r/ppp1pppp/8/3pn3/3P4/4P1P1/P2N1PP1/3K1B1R w kq - 0 13"
+blkFavBoard = getBoard sampleState
 
+blackTurnState = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
+blackTurnBoard = snd blackTurnState
+
+sampleState2 = readState "r1b4r/p2k1pbp/1qp2np1/3P4/2pP4/2N2N2/PP2QPPP/R1B1K2R w KQ - 1 13"
+sampleBoard2 = snd sampleState2
+
+pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+
+winnerState = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
+winnerBoard = snd $ readState "8/8/8/8/8/8/8/8 w kq - 2 10"
+
+{-
 testGetMoves :: [(RowNum, ColNum)]
 testGetMoves = getMoves pawnTestState ((5,5),Piece Black Pawn)
 
@@ -360,7 +444,7 @@ testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
 
 testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
 testAllPieces state@(_,board) = [(piece, prettyMoves  $ getMoves state (loc, piece)) | (loc, piece) <- board]
-
+-}
 --------------------------------------------
 --               IO Stuff
 --------------------------------------------               
@@ -372,19 +456,19 @@ loadGame f =
 
 writeGame :: GameState -> FilePath -> IO ()
 writeGame gs f =
-    do writeFile f (toFEN gs)
+    writeFile f (toFEN gs)
 
 toFEN :: GameState -> String
-toFEN (c, b) = 
+toFEN (c, b) =
     let rowsFEN = map (rowToFEN b) [8,7..1]
     in concat $ rowsFEN ++ [" w "]
 
 rowToFEN :: Board -> Int -> String
-rowToFEN b r = 
+rowToFEN b r =
     let rowStr = map (makePiece b) ([(i, r) | i <- [1 .. 8]])
-        groups = groupBy (\x y -> not $ (x == " " || y == " ") && (x /= y)) rowStr
-        fen = map (\lst -> if((head lst) == " ") then show $ length lst else concat lst) groups
-    in concat $ if(r /= 1) then fen ++ ["/"] else fen 
+        groups = groupBy (\x y -> not $ (x == " " || y == " ") && x /= y) rowStr
+        fen = map (\lst -> if head lst == " " then show $ length lst else concat lst) groups
+    in concat $ if r /= 1 then fen ++ ["/"] else fen
 
 putWinner :: GameState -> IO ()
 putWinner gs = undefined
