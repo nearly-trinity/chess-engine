@@ -30,5 +30,5 @@ rowToFEN b r =
     in concat $ if(r /= 1) then fen ++ ["/"] else fen 
 
 putWinner :: GameState -> IO ()
-putWinner gs = undefined
+putWinner gs@(color,board) = if isWinner board /= Nothing then putStrLn $ "The winner is: \"" ++ fromJust $ isWinner board ++ "\"" else return ()
 
