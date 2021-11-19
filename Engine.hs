@@ -406,4 +406,4 @@ testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
 testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
 testAllPieces state@(_,board) = [(piece, prettyMoves  $ getMoves state (loc, piece)) | (loc, piece) <- board]
 -}
-{-
+
