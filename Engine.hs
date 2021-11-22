@@ -1,4 +1,4 @@
-module Engine where 
+module Engine where
 
 import Data.List
 import Data.List.Split
@@ -16,7 +16,7 @@ import System.Environment
 --                          Data Types and Aliases
 ---------------------------------------------------------------------------- 
 
-type GameState = (Color, Board)
+type GameState = (Color, Board, Turns)
 
 -- bool to determine end game state
 data Outcome = Win Color | Tie deriving (Show, Eq)
@@ -40,6 +40,7 @@ type Location = (Int, Int)
 -- matrix notation
 type RowNum = Int
 type ColNum = Int
+type Turns = Int
 
 -- uppercase letters are for pieces of white team; lowercase letters are for black team
 instance Show Piece where
@@ -82,9 +83,11 @@ instance Show Piece where
 
 -- functions to extract turn/board from gameState
 getTurn :: GameState -> Color
-getTurn (turn,_) = turn
+getTurn (turn,_,_) = turn
 getBoard :: GameState -> Board
-getBoard (_,board) = board
+getBoard (_,board,_) = board
+getNumTurns :: GameState -> Turns
+getNumTurns (_,_,turns) = turns
 
 prettyBoard :: Board -> [((Char, RowNum), Piece)]
 prettyBoard = map (\((col,row), piece) -> ((chr (64+col),row), piece))
@@ -102,7 +105,8 @@ readState input = let
     board = let
         rows = [8,7..1] `zip` splitOn "/" boardData
         in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-    in (turn, catMaybes board)
+    numTurns = digitToInt (head (last rest))
+    in (turn, catMaybes board, numTurns)
 
 -- helper for readBoard
 readRow :: String -> RowNum -> ColNum -> [Maybe (Location, Piece)]
@@ -239,14 +243,14 @@ kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) p
 
 -- gets the list of possible moves for a piece depending on its piece type
 getMoves :: GameState -> (Location, Piece) -> [(Location, Piece)]
-getMoves (turn, board) (loc, piece) =
+getMoves (turn, board, _) (loc, piece) =
     let color = pColor piece
         checkPiece = lookup loc board
     in if isNothing checkPiece && color == turn
        then error "no piece at location"
        else if fromJust checkPiece /= piece
-       then error $ "incorrect piece at location" ++ (show (fromJust checkPiece)) ++ ", " ++ show piece
-       else let 
+       then error $ "incorrect piece at location" ++ show (fromJust checkPiece) ++ ", " ++ show piece
+       else let
 
        locs = case pType piece of
          King -> kingMoves board loc color
@@ -280,23 +284,29 @@ opColor Black = White
 opColor White = Black
 
 makeMove :: GameState -> (Location, Piece) -> Location -> GameState
-makeMove (turn, board) (from, piece) to = let
+makeMove (turn, board, turns) (from, piece) to = let
     color = pColor piece
     capPiece = (to, fromJust $ lookup to board)
     capBoard = filter (\p -> p /= (from,piece) && p /= capPiece) board
     remBoard = filter (/= (from, piece)) board
-    possibleMoves = map fst $ getMoves (turn, board) (from, piece) 
-    in 
-        if to `elem` possibleMoves && color == turn then 
-            if not (isNothing (lookup to board)) -- if we need to caputure a piece
-                then (opColor color, (to, piece):capBoard)
-            else (opColor color, (to, piece):remBoard)
+    possibleMoves = map fst $ getMoves (turn, board, turns) (from, piece)
+    in
+        if to `elem` possibleMoves && color == turn then
+            if isJust (lookup to board) -- if we need to caputure a piece
+                then (opColor color, (to, piece):capBoard, turns - 1)
+            else (opColor color, (to, piece):remBoard, turns - 1)
         else error "invalid move"
 
 
 
-isWinner :: Board -> Maybe Outcome
-isWinner board = let pieces = [piece | (loc,piece) <- board]
+isWinner :: GameState-> Maybe Outcome
+isWinner (_, board, turns) = 
+    case turns of 
+        0 -> Just Tie
+        _ -> playerWinner board 
+
+playerWinner :: Board -> Maybe Outcome
+playerWinner board = let pieces = [piece | (loc,piece) <- board]
                  in
                      if elem (Piece Black King) pieces && notElem (Piece White King) pieces
                          then Just (Win Black)
@@ -327,11 +337,11 @@ materialScore ((loc,p):ps) = case pType p of
     x -> 0 + materialScore ps
 
 eval :: GameState -> EvalScore
-eval (turn, board) = let
+eval (turn, board, x) = let
     (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
     matScore = materialScore whitePos - materialScore blackPos
-    whiteMobile = mobilityScore (turn,board) whitePos
-    blackMobile = mobilityScore (turn,board) blackPos
+    whiteMobile = mobilityScore (turn,board, x) whitePos
+    blackMobile = mobilityScore (turn,board, x) blackPos
     mobScore = fromIntegral (whiteMobile - blackMobile) / 5
     in fromIntegral matScore + mobScore
 
@@ -353,18 +363,18 @@ type PieceLocation = (Location, Piece)
 -- allMoves :: list of tuple of piece that is being moves and all of its possible moves
 
 statesForPiece :: GameState -> PieceLocation -> [Move] -> [(Move, GameState)]
-statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves] 
- 
+statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves]
+
 bestMove :: GameState -> Move
 bestMove = undefined
 
 bestOption :: GameState -> Move
-bestOption curState@(turn, board) = let
+bestOption curState@(turn, board,_) = let
     allMoves = [(p, getMoves curState p) | p <- board, pColor (snd p) == turn]
     nextStates = concat [statesForPiece curState piece moves | (piece, moves) <- allMoves]
     evalStates = map (\(mv, state) -> (eval state, (mv,state))) nextStates
-    in case turn of 
-        Black -> fst $ snd $ minimum evalStates 
+    in case turn of
+        Black -> fst $ snd $ minimum evalStates
         White -> fst $ snd $ maximum evalStates
 
 
@@ -384,17 +394,14 @@ midgameBoard = getBoard midgameState
 sampleState = readState "r1b1kb1r/ppp1pppp/8/3pn3/3P4/4P1P1/P2N1PP1/3K1B1R w kq - 0 13"
 blkFavBoard = getBoard sampleState
 
-blackTurnState = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
-blackTurnBoard = snd blackTurnState
+(blackColor, blackTurnBoard, blackTurns) = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
 
-sampleState2 = readState "r1b4r/p2k1pbp/1qp2np1/3P4/2pP4/2N2N2/PP2QPPP/R1B1K2R w KQ - 1 13"
-sampleBoard2 = snd sampleState2
+(sample2color, sampleState2Board, sample2turns) = readState "r1b4r/p2k1pbp/1qp2np1/3P4/2pP4/2N2N2/PP2QPPP/R1B1K2R w KQ - 1 13"
 
-pawnTestState = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
-pawnTestBoard = snd $ readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+(pawncolor, pawnTestState, pawnturns) = readState "r2qkb1r/1pp2p2/2npbn2/pP2p2p/3P2p1/2N1PN1P/P1P2PP1/R1BQKB1R w kq - 2 10"
+pawnTestBoard = pawnTestState
 
-winnerState = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
-winnerBoard = snd $ readState "8/8/8/8/8/8/8/8 w kq - 2 10"
+(winnercolor, winnerBoard, winnerTurns) = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
 
 {-
 testGetMoves :: [(RowNum, ColNum)]
@@ -406,4 +413,4 @@ testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
 testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
 testAllPieces state@(_,board) = [(piece, prettyMoves  $ getMoves state (loc, piece)) | (loc, piece) <- board]
 -}
-{-
+

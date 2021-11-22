@@ -16,7 +16,7 @@ offset strs = offsetStr : strs
 
 -- Returns a nicely formatted string that represents a board
 printBoard :: GameState -> IO ()
-printBoard (_,board) = putStr $ displayBoard board
+printBoard (_,board,_) = putStr $ displayBoard board
 
 displayBoard :: Board -> String
 displayBoard b = makeRows b ++ makeLine ++ makeBorder
