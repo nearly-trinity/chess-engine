@@ -346,6 +346,11 @@ eval (turn, board, x) = let
     in fromIntegral matScore + mobScore
 
 
+
+whoWillWin :: GameState -> Outcome  
+whoWillWin gState@(col, brd, turns) = undefined
+
+
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
 -- use some evaluation funtion to calculate the position
 
