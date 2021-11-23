@@ -373,16 +373,16 @@ whoWillWin (col, board, turns) =
         Nothing -> 
             let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
                 nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
-                res = map (\(mv, state) -> isWinner state) nextStates
+                res = map (\(mv, state) -> whoWillWin state) nextStates
             in if(colorIsPresent col res) then Win col else Win (inverse col)
 
 inverse :: Color -> Color
 inverse White = Black
 inverse Black = White
 
-colorIsPresent :: Color -> [Maybe Outcome] -> Bool
+colorIsPresent :: Color -> [Outcome] -> Bool
 colorIsPresent c outs = any (\x -> case x of
-                                       Just (Win c) -> True
+                                       Win c -> True
                                        _ -> False) outs
  
 
