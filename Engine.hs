@@ -381,9 +381,7 @@ inverse White = Black
 inverse Black = White
 
 colorIsPresent :: Color -> [Outcome] -> Bool
-colorIsPresent c outs = any (\x -> case x of
-                                       Win c -> True
-                                       _ -> False) outs
+colorIsPresent c outs = any (\x -> x == Win c) outs
  
 
 bestOption :: GameState -> Move
@@ -423,7 +421,7 @@ pawnTestBoard = pawnTestState
 
 testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 20"
 
-testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r w kq - 2 20"
+testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 20"
 
 {-
 testGetMoves :: [(RowNum, ColNum)]
