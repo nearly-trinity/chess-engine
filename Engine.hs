@@ -21,8 +21,6 @@ type GameState = (Color, Board, Turns)
 -- bool to determine end game state
 data Outcome = Win Color | Tie deriving (Show, Eq)
 
-data Turn = TColor Color deriving (Show, Eq)
-
 -- board is a list of location and the piece on that location
 type Board = [(Location, Piece)]
 
