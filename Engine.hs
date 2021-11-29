@@ -321,15 +321,10 @@ eval (turn, board, x) = let
     in fromIntegral matScore + mobScore
 
 
-
-whoWillWin :: GameState -> Outcome
-whoWillWin gState@(col, brd, turns) = undefined
-
-
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
 -- use some evaluation funtion to calculate the position
 
---------------------------------------------
+---------------------------------------------
 --               Best Play
 -------------------------------------------
 
@@ -345,8 +340,24 @@ type PieceLocation = (Location, Piece)
 statesForPiece :: GameState -> PieceLocation -> [Move] -> [(Move, GameState)]
 statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves]
 
-bestMove :: GameState -> Move
-bestMove = undefined
+whoWillWin :: GameState -> Outcome
+whoWillWin (col, board, 0) = Tie
+whoWillWin (col, board, turns) = 
+    case isWinner (col, board, turns) of 
+        Just x -> x
+        Nothing -> 
+            let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
+                nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
+                res = map (\(mv, state) -> whoWillWin state) nextStates
+            in if (colorIsPresent col res) then Win col else Win (inverse col)
+
+inverse :: Color -> Color
+inverse White = Black
+inverse Black = White
+
+colorIsPresent :: Color -> [Outcome] -> Bool
+colorIsPresent c outs = any (\x -> x == Win c) outs
+ 
 
 bestOption :: GameState -> Move
 bestOption curState@(turn, board,_) = let
@@ -356,6 +367,7 @@ bestOption curState@(turn, board,_) = let
     in case turn of
         Black -> fst $ snd $ minimum evalStates
         White -> fst $ snd $ maximum evalStates
+
 
 
 --------------------------------------------
