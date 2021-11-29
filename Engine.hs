@@ -152,6 +152,11 @@ isSameColor board loc color =
 isEmpty :: Board -> (RowNum, ColNum) -> Bool
 isEmpty board loc = loc `notElem` map fst board
 
+isCap board ((_,color), loc) =
+    case lookup loc board of
+              Nothing -> False
+              Just (_, pcolor) -> color /= pcolor
+
 -- reverse lookUp based on piece value
 lookupLoc :: Board -> Piece -> Maybe Location
 lookupLoc [] _ = Nothing
@@ -160,15 +165,15 @@ lookupLoc ((loc,piece):pieces) query =
     then Just loc
     else lookupLoc pieces query
 
--- returns a list of possible moves for a given piece at a given location using a direction lambda
-directionalMoves :: ((Int,Int) -> (Int,Int)) -> Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-directionalMoves f board loc@(x,y) color moves
-    | inBounds loc =
-        if isEmpty board loc then directionalMoves f board (f loc) color (loc:moves)
-        else
-            if isSameColor board loc color then moves
-            else loc:moves
-    | otherwise = moves
+-- returns a list of possible moves for a given piece at a given location using a direction offset
+directionalMoves :: [(Int, Int)] -> Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+directionalMoves directions board loc color = concat [aux f (f loc) | f <- moveFuns]
+   where
+      moveFuns = [ (\(x,y) -> (x+dx, y+dy)) | (dx,dy) <- directions]
+      aux f loc
+         | inBounds loc && isEmpty board loc = loc:aux f (f loc)
+         | inBounds loc && not (isSameColor board loc color) = [loc]
+         | otherwise = []
 
 -- returns a bool that represents if a move to a certain location on a board is permisilbe
 shouldMove :: Board -> (RowNum, ColNum) -> Color -> Bool
@@ -178,26 +183,16 @@ shouldMove board loc color
     | otherwise = False
 
 -- calls directionalMoves to get the list of possible row moves for a given loc
-rowMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-rowMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x+1,y)) board (x+1,y) color [] ++ directionalMoves (\(x,y)->(x-1,y)) board (x-1,y) color []
+rowMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+rowMoves board loc@(x,y) = directionalMoves [(1,0), (-1,0)] board loc
 
 -- calls directionalMoves to get the list of possible column moves for a given loc
-colMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-colMoves board loc@(x,y) color moves  = directionalMoves (\(x,y)->(x,y+1)) board (x,y+1) color [] ++ directionalMoves (\(x,y)->(x,y-1)) board (x,y-1) color []
+colMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+colMoves board loc@(x,y) = directionalMoves [(0,1), (0,-1)] board loc
 
--- calls directionalMoves to get the list of possible diagonal moves for a given loc
-diagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)] -> [(RowNum, ColNum)]
-diagMoves board loc@(x,y) color moves  =
-    directionalMoves (\(x,y)->(x+1,y+1)) board (x+1,y+1) color [] ++
-    directionalMoves (\(x,y)->(x-1,y-1)) board (x-1,y-1) color [] ++
-    directionalMoves (\(x,y)->(x+1,y-1)) board (x+1,y-1) color [] ++
-    directionalMoves (\(x,y)->(x-1,y+1)) board (x-1,y+1) color []
-
-knightMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
-knightMoves board loc@(x,y) color = filter (\pos -> shouldMove board pos color) possibleLocs
-    where
-        possibleLocs =
-            [(x+1,y+2),(x+2,y+1), (x-1,y+2), (x-2,y+1), (x-1,y-2), (x-2,y-1), (x+1,y-2), (x+2,y-1)]
+-- -- calls directionalMoves to get the list of possible diagonal moves for a given loc
+diagMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
+diagMoves board loc@(x,y) = directionalMoves [(1, 1), (-1, -1), (1, -1), (-1, 1)] board loc
 
 pawnMove :: Board -> (ColNum , RowNum) -> Color -> [(ColNum, RowNum)]
 pawnMove board loc@(col,row) color = let
@@ -235,40 +230,20 @@ pawnMove board loc@(col,row) color = let
                 if leftCap then [f1 loc] else
                     [f2 loc | rightCap]
 
-kingMoves :: Board -> (RowNum, ColNum) -> Color -> [(RowNum, ColNum)]
-kingMoves board loc@(x, y) color = filter (\pos -> shouldMove board pos color) possibleLocs
-    where
-        possibleLocs =
-            [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
-
 -- gets the list of possible moves for a piece depending on its piece type
 getMoves :: GameState -> (Location, Piece) -> [(Location, Piece)]
-getMoves (turn, board, _) (loc, piece) =
-    let color = pColor piece
-        checkPiece = lookup loc board
-    in if isNothing checkPiece && color == turn
-       then error "no piece at location"
-       else if fromJust checkPiece /= piece
-       then error $ "incorrect piece at location" ++ show (fromJust checkPiece) ++ ", " ++ show piece
-       else let
-
-       locs = case pType piece of
-         King -> kingMoves board loc color
-         Queen -> rows ++ cols ++ diags
-             where
-                 rows = rowMoves board loc color []
-                 cols = colMoves board loc color []
-                 diags = diagMoves board loc color []
-         Rook -> rows ++ cols
-             where
-                 rows = rowMoves board loc color []
-                 cols = colMoves board loc color []
-         Bishop -> diags
-             where
-                 diags = diagMoves board loc color []
-         Knight -> knightMoves board loc color
-         Pawn -> pawnMove board loc color
-       in map (\loc -> (loc, piece)) locs
+getMoves (turn, board, 0) (loc, piece) = []
+getMoves (turn, board, _) (l@(x,y), piece) = [(loc, piece) | loc <- aux rank]
+    where 
+          col = pColor piece
+          rank = pType piece
+          goodMove p = shouldMove board p col
+          aux King = filter goodMove [(x+1,y+1),(x+1,y-1), (x-1,y+1), (x-1,y-1), (x,y-1), (x-1,y), (x+1,y), (x,y+1)]
+          aux Knight = filter goodMove [(x+1,y+2),(x+2,y+1), (x-1,y+2), (x-2,y+1), (x-1,y-2), (x-2,y-1), (x+1,y-2), (x+2,y-1)]
+          aux Queen = rowMoves board l col ++ colMoves board l col ++ diagMoves board l col
+          aux Rook = rowMoves board l col ++ colMoves board l col
+          aux Bishop = diagMoves board l col
+          aux Pawn = pawnMove board l col
 
 -- converts col numbers to letters like a typical chess board
 prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
@@ -300,10 +275,10 @@ makeMove (turn, board, turns) (from, piece) to = let
 
 
 isWinner :: GameState-> Maybe Outcome
-isWinner (_, board, turns) = 
-    case turns of 
+isWinner (_, board, turns) =
+    case turns of
         0 -> Just Tie
-        _ -> playerWinner board 
+        _ -> playerWinner board
 
 playerWinner :: Board -> Maybe Outcome
 playerWinner board = let pieces = [piece | (loc,piece) <- board]
@@ -349,7 +324,7 @@ eval (turn, board, x) = let
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
 -- use some evaluation funtion to calculate the position
 
---------------------------------------------
+---------------------------------------------
 --               Best Play
 -------------------------------------------
 
@@ -394,9 +369,12 @@ bestOption curState@(turn, board,_) = let
         White -> fst $ snd $ maximum evalStates
 
 
+
 --------------------------------------------
 --               Test Code
 -------------------------------------------
+
+testGetMoves = getMoves (pawncolor, pawnTestState, pawnturns) ((5,8),Piece Black King)
 
 obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
 obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
@@ -423,14 +401,15 @@ testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 20"
 
 testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 20"
 
+
+
 {-
 testGetMoves :: [(RowNum, ColNum)]
 testGetMoves = getMoves pawnTestState ((5,5),Piece Black Pawn)
+testIncorrectGetMoves = getMoves startingState ((2,5),Piece White King)
 
-testIncorrectGetMoves :: [(RowNum, ColNum)]
-testIncorrectGetMoves = getMoves startingState ((2,5),Piece White Knight)
-
-testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
-testAllPieces state@(_,board) = [(piece, prettyMoves  $ getMoves state (loc, piece)) | (loc, piece) <- board]
+-- testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
+-- testAllPieces state@(_,board, turns) = [(piece, prettyMoves (map fst (getMoves state (loc, piece))) | (loc, piece) <- board]
 -}
+
 
