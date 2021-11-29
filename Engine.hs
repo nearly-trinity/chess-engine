@@ -221,10 +221,10 @@ pawnMove board loc@(col,row) color = let
                 rightAdvance = lookup (f2 loc) board
                 leftCap = case leftAdvance of
                     Nothing -> False
-                    x -> pColor (fromJust leftAdvance) /= color
+                    Just x -> pColor x /= color
                 rightCap = case rightAdvance of
                     Nothing -> False
-                    x -> pColor (fromJust rightAdvance) /= color
+                    Just x -> pColor x /= color
             in  if leftCap && rightCap
                     then [f1 loc, f2 loc] else
                 if leftCap then [f1 loc] else
@@ -397,9 +397,11 @@ pawnTestBoard = pawnTestState
 
 (winnercolor, winnerBoard, winnerTurns) = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
 
-testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 20"
+testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/8 w kq - 2 20"
 
 testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 20"
+
+testTie = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 0"
 
 
 
