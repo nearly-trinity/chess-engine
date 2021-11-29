@@ -349,7 +349,7 @@ whoWillWin (col, board, turns) =
             let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
                 nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
                 res = map (\(mv, state) -> whoWillWin state) nextStates
-            in if (colorIsPresent col res) then Win col else Win (inverse col)
+            in if(colorIsPresent col res) then Win col else Win (inverse col)
 
 inverse :: Color -> Color
 inverse White = Black
@@ -374,6 +374,8 @@ bestOption curState@(turn, board,_) = let
 --               Test Code
 -------------------------------------------
 
+testGetMoves = getMoves (pawncolor, pawnTestState, pawnturns) ((5,8),Piece Black King)
+
 obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
 obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
 
@@ -395,12 +397,19 @@ pawnTestBoard = pawnTestState
 
 (winnercolor, winnerBoard, winnerTurns) = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
 
+testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 20"
 
-testGetMoves = getMoves (pawncolor, pawnTestState, pawnturns) ((5,8),Piece Black King)
+testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 20"
 
+
+
+{-
+testGetMoves :: [(RowNum, ColNum)]
+testGetMoves = getMoves pawnTestState ((5,5),Piece Black Pawn)
 testIncorrectGetMoves = getMoves startingState ((2,5),Piece White King)
 
 -- testAllPieces :: GameState -> [(Piece, [(Char, RowNum)])]
 -- testAllPieces state@(_,board, turns) = [(piece, prettyMoves (map fst (getMoves state (loc, piece))) | (loc, piece) <- board]
+-}
 
 
