@@ -44,14 +44,6 @@ makeContent b n = concat $ ([(\ x -> "| " ++ makePiece b x ++ " ") (i, n) | i <-
 -- Returns the representation of a piece, or a space if there is no piece at that location
 makePiece :: Board -> Location -> String
 makePiece b loc =
-    maybe " " show (lookupVal loc b)
-
--- Just a simple lookup function
-lookupVal :: Eq a => a -> [(a, b)] -> Maybe b
-lookupVal key lst = lookupHelper ([snd x | x <- lst, key == fst x])
-
-lookupHelper :: [b] -> Maybe b
-lookupHelper [x]  = Just x
-lookupHelper lst  = Nothing
+    maybe " " show (lookup loc b)
 
 
