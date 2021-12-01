@@ -5,7 +5,6 @@ import Data.List
 import System.IO
 import System.Environment
 import Data.Maybe
-
 --------------------------------------------
 --               IO Stuff
 --------------------------------------------               
@@ -33,7 +32,6 @@ rowToFEN b r =
 
 putWinner :: GameState -> IO ()
 putWinner gs@(color,board, turns) =
-    if isJust (isWinner gs)
-        then putStrLn $ "The outcome is: \"" ++ show (fromJust $ isWinner gs) ++ "\""
-        else return ()
-
+    case isWinner gs of
+        Nothing -> return ()
+        Just x -> putStrLn $ "The outcome is: \"" ++ show x ++ "\""
