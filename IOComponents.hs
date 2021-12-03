@@ -35,3 +35,9 @@ putWinner gs@(color,board, turns) =
     case isWinner gs of
         Nothing -> return ()
         Just x -> putStrLn $ "The outcome is: \"" ++ show x ++ "\""
+
+putWinner2 :: GameState -> IO ()
+putWinner2 gs@(color,board,turns) = 
+        case whoWillWin gs of
+                Tie -> return ()
+                Win x -> putStrLn $ "The outcome is: " ++ show x ++ " wins!"
