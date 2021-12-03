@@ -35,6 +35,10 @@ type RowNum = Int
 type ColNum = Int
 type Turns = Int
 
+
+type Move = (Location, Piece)
+type PieceLocation = (Location, Piece)
+
 -- uppercase letters are for pieces of white team; lowercase letters are for black team
 instance Show Piece where
     show (Piece White King) = "K"
@@ -71,7 +75,7 @@ instance Show Piece where
 -- The en passant target square is specified after a double push of a pawn, no matter whether an en passant capture is really possible or not [2] [3] [4] . Other moves than double pawn pushes imply the symbol '-' for this FEN field.
 -- The halfmove clock specifies a decimal number of half moves with respect to the 50 move draw rule. It is reset to zero after a capture or a pawn move and incremented otherwise.
 -- The number of the full moves in a game. It starts at 1, and is incremented after each Black's move.
--- more info: https://www.chessprogramming.org/Forsyth-Edwards_Notation#Piece_Placement
+-- -- more info: https://www.chessprogramming.org/Forsyth-Edwards_Notation#Piece_Placement
 -}
 
 -- functions to extract turn/board from gameState
@@ -246,7 +250,6 @@ getMoves (turn, board, _) (l@(x,y), piece) = [(loc, piece) | loc <- aux rank]
 prettyMoves :: [(ColNum, RowNum)] -> [(Char, RowNum)]
 prettyMoves = map (\(col, row) -> (chr (64 + col), row))
 
-
 ------------------------------------------------------------------
 --                      Game Engine
 ------------------------------------------------------------------
@@ -273,9 +276,8 @@ makeMove (turn, board, turns) (from, piece) to = let
 
 isWinner :: GameState-> Maybe Outcome
 isWinner (_, board, turns) =
-    case turns of
-        0 -> Just Tie
-        _ -> playerWinner board
+     let res = playerWinner board
+     in if(res == Nothing && turns == 0) then Just Tie else res
 
 playerWinner :: Board -> Maybe Outcome
 playerWinner board = let pieces = [piece | (loc,piece) <- board]
@@ -301,6 +303,7 @@ mobilityScore state pieces = let
 materialScore :: ColoredPieces -> Int
 materialScore [] = 0
 materialScore ((loc,p):ps) = case pType p of
+    King -> 100 + materialScore ps
     Queen -> 9 + materialScore ps
     Rook -> 5 + materialScore ps
     Bishop -> 3 + materialScore ps
@@ -310,7 +313,7 @@ materialScore ((loc,p):ps) = case pType p of
 
 eval :: GameState -> EvalScore
 eval (turn, board, x) = let
-    (whitePos, blackPos) = partition (\(loc, p) -> pColor p == White) board
+    (whitePos, blackPos) = partition (\(loc,p) -> pColor p == White) board
     matScore = materialScore whitePos - materialScore blackPos
     whiteMobile = mobilityScore (turn,board, x) whitePos
     blackMobile = mobilityScore (turn,board, x) blackPos
@@ -326,8 +329,6 @@ eval (turn, board, x) = let
 -------------------------------------------
 
 maxDepth = 4
-type Move = (Location, Piece)
-type PieceLocation = (Location, Piece)
 -- generate the game tree by evaluating every possible move for every piece
 -- generate all moves: [getMoves GameState piece | piece <- All Pieces]
 -- for each move in all moves, call makeMove to return the updated GameState and do this recursively
@@ -338,16 +339,15 @@ statesForPiece :: GameState -> PieceLocation -> [Move] -> [(Move, GameState)]
 statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) | move@(to,p) <- moves]
 
 whoWillWin :: GameState -> Outcome
-whoWillWin (col, board, 0) = Tie
-whoWillWin (col, board, turns) =
-    case isWinner (col, board, turns) of
+whoWillWin (col, board, turns) = 
+    case isWinner (col, board, turns) of 
         Just x -> x
-        Nothing ->
+        Nothing -> 
             let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
                 nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
-                res = map (\(mv, (c, b, t)) -> whoWillWin (c,b,t)) nextStates
-            in if Win col `elem` res then Win col
-               else if all (==Tie) res then Tie
+                res = map (\(mv, (c, b, t)) -> whoWillWin $ (c,b,t)) nextStates
+            in if(Win col `elem` res) then Win col 
+               else if(Tie `elem` res) then Tie 
                else Win (inverse col)
 
 inverse :: Color -> Color
@@ -375,7 +375,7 @@ testGetMoves = getMoves (pawncolor, pawnTestState, pawnturns) ((5,8),Piece Black
 obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
 obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
 
-startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 100"
 startingBoard = getBoard startingState
 
 startingStateBlack = readState"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
@@ -399,6 +399,8 @@ pawnTestBoard = pawnTestState
 testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 30"
 
 testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 40"
+
+blackQueen = Piece Black Queen
 
 testTie = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 0"
 
