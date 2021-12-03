@@ -1,14 +1,9 @@
 module Engine where
 
-import Data.List
-import Data.List.Split
-import Data.Maybe
-import Data.Set (intersection, difference, singleton, Set, fromList, member, insert)
-import qualified Data.Set as Set
---import Data.Char (isAsciiLower, isAsciiUpper, chr)
-import Data.Char
-import System.IO
-import System.Environment
+import Data.List ( partition )
+import Data.List.Split ( splitOn )
+import Data.Maybe ( catMaybes, fromJust, isJust, isNothing )
+import Data.Char ( digitToInt, chr, isAsciiLower, isAsciiUpper )
 
 
 
@@ -103,8 +98,12 @@ readState input = let
     board = let
         rows = [8,7..1] `zip` splitOn "/" boardData
         in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-    numTurns = digitToInt (head (last rest))
+    numTurns = makeInt (last rest) (length $ last rest)
     in (turn, catMaybes board, numTurns)
+    where
+        makeInt :: [Char] -> Int -> Int
+        makeInt [] _ = 0
+        makeInt (x:xs) ind = digitToInt x * (10^(ind-1)) + makeInt xs (ind-1)
 
 -- helper for readBoard
 readRow :: String -> RowNum -> ColNum -> [Maybe (Location, Piece)]
@@ -232,7 +231,7 @@ pawnMove board loc@(col,row) color = let
 getMoves :: GameState -> (Location, Piece) -> [(Location, Piece)]
 getMoves (turn, board, 0) (loc, piece) = []
 getMoves (turn, board, _) (l@(x,y), piece) = [(loc, piece) | loc <- aux rank]
-    where 
+    where
           col = pColor piece
           rank = pType piece
           goodMove p = shouldMove board p col
@@ -340,21 +339,21 @@ statesForPiece state from@(loc, piece) moves = [(move, makeMove state from to) |
 
 whoWillWin :: GameState -> Outcome
 whoWillWin (col, board, 0) = Tie
-whoWillWin (col, board, turns) = 
-    case isWinner (col, board, turns) of 
+whoWillWin (col, board, turns) =
+    case isWinner (col, board, turns) of
         Just x -> x
-        Nothing -> 
+        Nothing ->
             let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
                 nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
-                res = map (\(mv, (c, b, t)) -> whoWillWin $ (c,b,t)) nextStates
-            in if(any (== Win col) res) then Win col 
-               else if(all (==Tie) res) then Tie 
+                res = map (\(mv, (c, b, t)) -> whoWillWin (c,b,t)) nextStates
+            in if Win col `elem` res then Win col
+               else if all (==Tie) res then Tie
                else Win (inverse col)
 
 inverse :: Color -> Color
 inverse White = Black
 inverse Black = White
- 
+
 
 bestOption :: GameState -> Move
 bestOption curState@(turn, board,_) = let
@@ -399,7 +398,7 @@ pawnTestBoard = pawnTestState
 
 testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 30"
 
-testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r w kq - 2 40"
+testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 40"
 
 testTie = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 0"
 
