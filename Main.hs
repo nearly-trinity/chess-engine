@@ -30,15 +30,15 @@ main =
          let fname = if null inputs then "gamestates.txt" else head inputs
          state <- loadGame fname
          let action | Winner `elem` flags = putWinner2 state 
-                    | Verbose `elem` flags = bestOption state 
-         action
-         -- case getDepth flags of 
+                    | Verbose `elem` flags = putStrLn $ show (bestOption state)
+                    | Depth `elem` flags = undefined
+         action 
                        
 
 
 
 getDepth :: [Flag] -> Int 
-getDepth [] = 4
+getDepth [] = 3
 getDepth (Depth s:flags) = read s
 getDepth (_:flags) = getDepth flags
                         
