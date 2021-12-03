@@ -10,7 +10,6 @@ import Data.Maybe
 import System.Exit
 import Engine
 import IOComponents
-import DisplayBoard
 --import gamestates
 
 data Flag = Help | Depth String | Winner | Verbose deriving (Eq, Show)
