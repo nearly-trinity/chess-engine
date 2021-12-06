@@ -271,6 +271,13 @@ makeMove (turn, board, turns) (from, piece) to = let
                 then (opColor color, (to, piece):capBoard, turns - 1)
             else (opColor color, (to, piece):remBoard, turns - 1)
         else error "invalid move"
+        
+unsafeMakeMove :: GameState -> (Location, Piece) -> Location -> GameState
+unsafeMakeMove state@(turn,bd,turns) start@(from, piece) to = let
+    newBoard = filter (\p@(loc,_) -> loc /= to && p /= start) bd
+    in (inverse turn, (to,piece):newBoard, turns-1)
+    
+
 
 
 
@@ -309,7 +316,6 @@ materialScore ((loc,p):ps) = case pType p of
     Bishop -> 3 + materialScore ps
     Knight -> 3 + materialScore ps
     Pawn -> 1 + materialScore ps
-    x -> 0 + materialScore ps
 
 eval :: GameState -> EvalScore
 eval (turn, board, x) = let
@@ -364,9 +370,45 @@ bestOption curState@(turn, board,_) = let
         Black -> fst $ snd $ minimum evalStates
         White -> fst $ snd $ maximum evalStates
 
+-- a node is represented by a game state, hold onto the depth
+-- store the "maximizer" as whoevers turn it is in origional state
+
+allNextStates :: GameState -> [GameState] 
+allNextStates state@(turn,bd,_) = let
+    allMoves = [(p, getMoves state p) | p <- bd, pColor (snd p) == turn]
+    getStates state from moves = [makeMove state from to | (to,p) <- moves]
+    in concat [getStates state piece moves | (piece, moves) <- allMoves]
+
+type Depth = Integer
+type Maximizer = Bool
+
+bestPlay :: GameState -> Move
+bestPlay state@(turn,bd,mvs) = let
+    allMoves = [(p, getMoves state p) | p <- bd, pColor (snd p) == turn]
+    allStates = concat [statesForPiece state piece moves | (piece, moves) <- allMoves]
+    in case turn of
+        Black -> 
+            snd $ minimum $ map (\(mv,st) -> (minimax st maxDepth False, mv)) allStates
+        White -> 
+            snd $ maximum $ map (\(mv,st) -> (minimax st maxDepth True, mv)) allStates
+
+minimax :: GameState -> Depth -> Maximizer -> EvalScore
+-- leaf nodes are nodes with a winner or depth == 0
+-- if not isNothing isWinner state then terminal node
+minimax state@(turn,bd,mvs) remDepth isMaximizer = 
+    if remDepth == 0 || not (isNothing (isWinner state)) -- base case
+        then eval state
+    else if isMaximizer
+        -- out of all the possible moves pick the max between maxVal and all minimax results
+        then let allMoves = allNextStates state 
+        in  maximum $ map (\state -> minimax state (remDepth-1) (not isMaximizer)) allMoves
+    else -- not maximizer
+        let allMoves = allNextStates state 
+        in  minimum $ map (\state -> minimax state (remDepth-1) (not isMaximizer)) allMoves
+         
 
 
---------------------------------------------
+-------------------------------------------
 --               Test Code
 -------------------------------------------
 
