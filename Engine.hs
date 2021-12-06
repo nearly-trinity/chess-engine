@@ -349,9 +349,7 @@ whoWillWin (col, board, turns) =
     case isWinner (col, board, turns) of 
         Just x -> x
         Nothing -> 
-            let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
-                nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
-                res = map (\(mv, (c, b, t)) -> whoWillWin $ (c,b,t)) nextStates
+            let res = map (\gs -> whoWillWin gs) (allNextStates (col,board,turns))
             in if(Win col `elem` res) then Win col 
                else if(Tie `elem` res) then Tie 
                else Win (inverse col)
@@ -417,7 +415,7 @@ testGetMoves = getMoves (pawncolor, pawnTestState, pawnturns) ((5,8),Piece Black
 obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
 obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
 
-startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 100"
+startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3"
 startingBoard = getBoard startingState
 
 startingStateBlack = readState"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
@@ -438,9 +436,9 @@ pawnTestBoard = pawnTestState
 (winnercolor, winnerBoard, winnerTurns) = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
 
 
-testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 30"
+testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 3"
 
-testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 40"
+testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 4"
 
 blackQueen = Piece Black Queen
 
