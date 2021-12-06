@@ -380,15 +380,15 @@ allNextStates state@(turn,bd,_) = let
 type Depth = Integer
 type Maximizer = Bool
 
-bestPlay :: GameState -> Move
-bestPlay state@(turn,bd,mvs) = let
+bestPlay :: GameState -> Depth -> Move
+bestPlay state@(turn,bd,mvs) d = let
     allMoves = [(p, getMoves state p) | p <- bd, pColor (snd p) == turn]
     allStates = concat [statesForPiece state piece moves | (piece, moves) <- allMoves]
     in case turn of
         Black -> 
-            snd $ minimum $ map (\(mv,st) -> (minimax st maxDepth False, mv)) allStates
+            snd $ minimum $ map (\(mv,st) -> (minimax st d False, mv)) allStates
         White -> 
-            snd $ maximum $ map (\(mv,st) -> (minimax st maxDepth True, mv)) allStates
+            snd $ maximum $ map (\(mv,st) -> (minimax st d True, mv)) allStates
 
 minimax :: GameState -> Depth -> Maximizer -> EvalScore
 -- leaf nodes are nodes with a winner or depth == 0
