@@ -407,8 +407,8 @@ type Depth = Integer
 type Maximizer = Bool
 
 
-greedyPlay :: GameState -> Move
-greedyPlay state@(turn,bd,mvs) = let
+greedyPlay :: GameState -> Depth -> Move
+greedyPlay state@(turn,bd,mvs) d = let
     allMoves = [(p, getMoves state p) | p <- bd, pColor (snd p) == turn]
     allStates = concat [statesForPiece state piece moves | (piece, moves) <- allMoves]
     in case turn of
