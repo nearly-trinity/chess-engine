@@ -29,18 +29,18 @@ main =
          let fname = if null inputs then "gamestates.txt" else head inputs
          state <- loadGame fname
          let action | Winner `elem` flags && Verbose `elem` flags = output state True (getDepth flags)
-                    | Winner `elem` flags = output state False (getDepth flags)
+                    | Winner `elem` flags = putStrLn $ "The best move for this state is: " ++ show (bestMove state)
                     | Verbose `elem` flags = output state True (getDepth flags)
-                    | otherwise = putStrLn $ show (bestPlay state (getDepth flags))
+                    | otherwise = putStrLn $ "The best move for maxDepth is: " ++ show (greedyPlay state (getDepth flags))
          action 
                        
 output :: GameState -> Bool -> Integer -> IO()
 output gs True depth =  
-        do putStrLn $ "The best move for a cut-off depth of " ++ show depth ++ " is: " ++ show (bestPlay gs depth)
+        do putStrLn $ "The best move for a cut-off depth of " ++ show depth ++ " is: " ++ show (greedyPlay gs depth)
            putStr $ "The game ended with this result: " 
            putWinner2 gs True
 output gs False depth = 
-        do putStrLn $ "The best move for a cut-off depth of " ++ show depth ++ " is: " ++ show (bestPlay gs depth)
+        do putStrLn $ "The best move for a cut-off depth of " ++ show depth ++ " is: " ++ show (greedyPlay gs depth)
 
 
 getDepth :: [Flag] -> Integer 
