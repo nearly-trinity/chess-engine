@@ -323,8 +323,8 @@ eval (turn, board, x) = let
     matScore = materialScore whitePos - materialScore blackPos
     whiteMobile = mobilityScore (turn,board, x) whitePos
     blackMobile = mobilityScore (turn,board, x) blackPos
-    mobScore = fromIntegral (whiteMobile - blackMobile) / 5
-    in fromIntegral matScore + mobScore
+    --mobScore = fromIntegral (whiteMobile - blackMobile) / 5
+    in fromIntegral matScore -- + mobScore
 
 
 -- black eval is (-), white eval is (+), thus if black is winning the evaluation will be negative
@@ -358,6 +358,32 @@ inverse :: Color -> Color
 inverse White = Black
 inverse Black = White
 
+bestMove :: GameState -> Move
+-- pass along a boolean to determine turn, if its starting p's turn then condition is any
+-- if its other p's turn then its all states leading to checkmate for first player
+bestMove state@(turn,board,_) = let
+    startingColor = turn
+    allNextMoves = [(p, getMoves state p) | p <- board, pColor (snd p) == turn]
+    allStates = concat [statesForPiece state piece moves | (piece, moves) <- allNextMoves]
+    search :: GameState -> Bool -> Bool
+    search state@(turn,board,_) startingPlayer = let 
+        foundWinner = isWinner state
+        allMoves = allNextStates state
+        in if not $ isNothing $ foundWinner
+            then case foundWinner of
+                Just x -> case x of 
+                    Win y -> y == startingColor
+                    Tie -> False
+                Nothing -> error "this should never happen"                 
+        else if startingPlayer
+            then or $ map (\st -> search st (not startingPlayer)) allMoves
+        else and $ map (\st -> search st (not startingPlayer)) allMoves
+    evaluatedMoves = [(search state False, mv) | (mv, state) <- allStates]
+    winningMoves = filter (\elem -> (fst elem) == True) evaluatedMoves
+    in if null winningMoves then ((0,0), Piece Black King)
+    else snd $ head winningMoves
+
+
 
 bestOption :: GameState -> Move
 bestOption curState@(turn, board,_) = let
@@ -380,8 +406,9 @@ allNextStates state@(turn,bd,_) = let
 type Depth = Integer
 type Maximizer = Bool
 
-bestPlay :: GameState -> Depth -> Move
-bestPlay state@(turn,bd,mvs) d = let
+
+greedyPlay :: GameState -> Depth -> Move
+greedyPlay state@(turn,bd,mvs) d = let
     allMoves = [(p, getMoves state p) | p <- bd, pColor (snd p) == turn]
     allStates = concat [statesForPiece state piece moves | (piece, moves) <- allMoves]
     in case turn of
@@ -412,10 +439,19 @@ minimax state@(turn,bd,mvs) remDepth isMaximizer =
 
 testGetMoves = getMoves (pawncolor, pawnTestState, pawnturns) ((5,8),Piece Black King)
 
+myGameState = readState "2k4r/ppp4p/2b3p1/6r1/3pP2R/P2B4/3K2P1/8 w - - 0 28"
+
 obviousMoveBlack = readState "rnbqkbnr/ppp1pp1p/6p1/3p3Q/3P4/4P3/PPP2PPP/RNB1KBNR b KQkq - 1 3"
 obviousMoveWhite = readState "rnb1kbnr/ppp1pppp/8/3p4/3P2q1/4P2P/PPP2PP1/RNBQKBNR w KQkq - 1 4"
 
+-- mates
+mateInOneWhite = readState "1RR2rk1/5ppp/8/8/8/8/5PPP/6K1 w - - 0 3"
+mateInTwoWhite = readState "1R3rk1/2R2ppp/8/8/8/1Q6/5PPP/6K1 w - - 0 5"
+mateInThreeWhite = readState "1R2rrk1/2R2ppp/8/8/8/1Q6/5PPP/6K1 w - - 0 40"
+mateInThreeKnightWhite = readState "3r4/7p/2R5/6k1/8/4N1PP/5PK1/8 w - - 0 40"
+
 startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3"
+
 startingBoard = getBoard startingState
 
 startingStateBlack = readState"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
