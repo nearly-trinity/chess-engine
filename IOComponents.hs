@@ -35,11 +35,11 @@ putWinner gs@(color,board, turns) =
         Nothing -> return ()
         Just x -> putStrLn $ "The outcome is: \"" ++ show x ++ "\""
 
-putWinner2 :: GameState -> IO ()
-putWinner2 gs@(color,board,turns) = 
+putWinner2 :: GameState -> Bool -> IO ()
+putWinner2 gs@(color,board,turns) isVerbose = 
         case whoWillWin gs of
-                Tie -> return ()
-                Win x -> putStrLn $ "The outcome is: " ++ show x ++ " wins!"
+                Tie -> putStrLn $ "Tie"
+                Win x -> if isVerbose then putStrLn $ "The outcome is: " ++ show x ++ " wins!" else putStrLn $ show x
  
 ----------------------------------------------------------------------------
 --                          Display Board

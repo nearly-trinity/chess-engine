@@ -93,21 +93,21 @@ prettyBoard = map (\((col,row), piece) -> ((chr (64+col),row), piece))
 -- blackTurnState = readState "r3kb1r/ppp3pp/5p2/3p1b2/6P1/4P3/P2NBPP1/3K3R b kq - 0 16"
 -- parses the FEN notation
 readState :: String -> GameState
-readState input = let
-    (boardData:rest) = splitOn " " input
-    turn = case head rest of -- this is either "w" or "b"
-        "w" -> White
-        "b" -> Black
-        x -> error "invalid turn"
-    board = let
-        rows = [8,7..1] `zip` splitOn "/" boardData
-        in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
-    numTurns = makeInt (last rest) (length $ last rest)
-    in (turn, catMaybes board, numTurns)
-    where
-        makeInt :: [Char] -> Int -> Int
-        makeInt [] _ = 0
-        makeInt (x:xs) ind = digitToInt x * (10^(ind-1)) + makeInt xs (ind-1)
+readState input = 
+  let (boardData:rest) = splitOn " " (filter (/='\n') input)
+      turn = case head rest of -- this is either "w" or "b"
+          "w" -> White
+          "b" -> Black
+          x -> error "invalid turn"
+      board = let
+          rows = [8,7..1] `zip` splitOn "/" boardData
+          in concat [readRow str rowNum 1 | (rowNum, str) <- rows]
+      numTurns = makeInt (last rest) (length $ last rest)
+      in (turn, catMaybes board, numTurns)
+      where
+          makeInt :: [Char] -> Int -> Int
+          makeInt [] _ = 0
+          makeInt (x:xs) ind = digitToInt x * (10^(ind-1)) + makeInt xs (ind-1)
 
 -- helper for readBoard
 readRow :: String -> RowNum -> ColNum -> [Maybe (Location, Piece)]
@@ -334,7 +334,7 @@ eval (turn, board, x) = let
 --               Best Play
 -------------------------------------------
 
-maxDepth = 4
+maxDepth = 3
 -- generate the game tree by evaluating every possible move for every piece
 -- generate all moves: [getMoves GameState piece | piece <- All Pieces]
 -- for each move in all moves, call makeMove to return the updated GameState and do this recursively
