@@ -349,9 +349,7 @@ whoWillWin (col, board, turns) =
     case isWinner (col, board, turns) of 
         Just x -> x
         Nothing -> 
-            let allMoves = [(p, getMoves (col, board, turns) p) | p <- board, pColor (snd p) == col]
-                nextStates = concat [statesForPiece (col, board, turns) piece moves | (piece, moves) <- allMoves]
-                res = map (\(mv, (c, b, t)) -> whoWillWin $ (c,b,t)) nextStates
+            let res = map (\gs -> whoWillWin gs) (allNextStates (col,board,turns))
             in if(Win col `elem` res) then Win col 
                else if(Tie `elem` res) then Tie 
                else Win (inverse col)
@@ -408,16 +406,16 @@ allNextStates state@(turn,bd,_) = let
 type Depth = Integer
 type Maximizer = Bool
 
+
 greedyPlay :: GameState -> Move
 greedyPlay state@(turn,bd,mvs) = let
     allMoves = [(p, getMoves state p) | p <- bd, pColor (snd p) == turn]
     allStates = concat [statesForPiece state piece moves | (piece, moves) <- allMoves]
     in case turn of
         Black -> 
-            snd $ minimum $ map (\(mv,st) -> (minimax st maxDepth False, mv)) allStates
+            snd $ minimum $ map (\(mv,st) -> (minimax st d False, mv)) allStates
         White -> 
-            snd $ maximum $ map (\(mv,st) -> (minimax st maxDepth True, mv)) allStates
-       
+            snd $ maximum $ map (\(mv,st) -> (minimax st d True, mv)) allStates
 
 minimax :: GameState -> Depth -> Maximizer -> EvalScore
 -- leaf nodes are nodes with a winner or depth == 0
@@ -452,12 +450,8 @@ mateInTwoWhite = readState "1R3rk1/2R2ppp/8/8/8/1Q6/5PPP/6K1 w - - 0 5"
 mateInThreeWhite = readState "1R2rrk1/2R2ppp/8/8/8/1Q6/5PPP/6K1 w - - 0 40"
 mateInThreeKnightWhite = readState "3r4/7p/2R5/6k1/8/4N1PP/5PK1/8 w - - 0 40"
 
+startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 3"
 
-
-
-
-
-startingState = readState "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 100"
 startingBoard = getBoard startingState
 
 startingStateBlack = readState"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
@@ -478,9 +472,9 @@ pawnTestBoard = pawnTestState
 (winnercolor, winnerBoard, winnerTurns) = readState "8/8/8/8/8/8/8/8 w kq - 2 10"
 
 
-testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 30"
+testWhiteWinning = readState "R2QK2R/8/8/8/8/8/8/3k4 w kq - 2 3"
 
-testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 40"
+testBlackWinning = readState "3K4/8/8/8/8/8/8/r2qk2r b kq - 2 4"
 
 blackQueen = Piece Black Queen
 
